@@ -46,7 +46,8 @@ class Config:
     MEMORY_FILE = "vecna_memory.json"
     OFFLINE_MODE = False
     USE_WHISPER = WHISPER_AVAILABLE
-    WHISPER_MODEL = "tiny"  # tiny, base, small, medium, large
+    WHISPER_MODEL = "base"  # Changed from tiny to base for better accuracy - options: tiny, base, small, medium, large
+    LANGUAGE = "en-US"       # Explicitly set language to US English
     USE_LLM = True
     LLM_TYPE = "openai"  # openai, gemini, ollama
     
@@ -200,56 +201,86 @@ class SpeechEngine:
 class SpeechRecognizer:
     def __init__(self):
         self.recognizer = sr.Recognizer()
-        self.recognizer.energy_threshold = 4000
+        # Lower energy threshold for better sensitivity
+        self.recognizer.energy_threshold = 3000
         self.recognizer.dynamic_energy_threshold = True
+        # Increase the pause threshold to give more time to finish speaking
+        self.recognizer.pause_threshold = 0.8
+        # Add a small amount of ambient noise adjustment
+        self.recognizer.dynamic_energy_adjustment_damping = 0.15
+        # Increase the timeout duration
+        self.phrase_timeout = 3
         
-        # Initialize Whisper if available
+        # Initialize Whisper if available (much better for accented English)
         self.whisper_model = None
         if Config.USE_WHISPER and WHISPER_AVAILABLE:
             try:
-                self.whisper_model = WhisperModel(Config.WHISPER_MODEL, device="cpu")
+                # Prefer 'base' or 'small' model for better English recognition
+                preferred_model = "base" if Config.WHISPER_MODEL == "tiny" else Config.WHISPER_MODEL
+                self.whisper_model = WhisperModel(preferred_model, device="cpu", language="en")
+                print(f"Initialized Whisper with {preferred_model} model specifically for English")
             except Exception as e:
                 print(f"Error initializing Whisper: {e}")
     
     def listen(self):
         with sr.Microphone() as source:
             print("🎤 Listening...")
-            self.recognizer.adjust_for_ambient_noise(source)
-            audio = self.recognizer.listen(source)
-        return audio
+            # Longer adjustment for better calibration
+            self.recognizer.adjust_for_ambient_noise(source, duration=0.5)
+            try:
+                print("Speak now...")
+                # Increase timeout for those who speak more slowly
+                audio = self.recognizer.listen(source, timeout=5, phrase_time_limit=self.phrase_timeout)
+                print("Processing speech...")
+                return audio
+            except sr.WaitTimeoutError:
+                print("No speech detected")
+                return None
     
     def recognize(self, audio):
-        if Config.OFFLINE_MODE or not WHISPER_AVAILABLE:
-            try:
-                return self.recognizer.recognize_google(audio)
-            except sr.UnknownValueError:
-                return ""
-            except sr.RequestError:
-                print("Network error, switching to offline recognition")
-                Config.OFFLINE_MODE = True
-                return ""
-        else:
-            # Use Whisper for better accuracy
+        if audio is None:
+            return ""
+            
+        # Try multiple recognition methods in order of accuracy
+        text = ""
+        
+        # First try Whisper if available (best for accents)
+        if not Config.OFFLINE_MODE and WHISPER_AVAILABLE and self.whisper_model:
             try:
                 temp_file = "temp_audio.wav"
                 with open(temp_file, "wb") as f:
                     f.write(audio.get_wav_data())
                 
-                segments, _ = self.whisper_model.transcribe(temp_file, beam_size=5)
+                # Use more aggressive beam search for better accuracy
+                segments, _ = self.whisper_model.transcribe(temp_file, beam_size=5, language="en")
                 text = " ".join([segment.text for segment in segments])
                 
                 # Clean up
                 if os.path.exists(temp_file):
                     os.remove(temp_file)
                 
-                return text
+                if text.strip():
+                    print(f"Whisper recognized: '{text}'")
+                    return text
             except Exception as e:
                 print(f"Error with Whisper recognition: {e}")
-                # Fall back to Google
-                try:
-                    return self.recognizer.recognize_google(audio)
-                except:
-                    return ""
+                # Fall through to next method
+        
+        # Then try Google (with language explicitly set to English)
+        if not text:
+            try:
+                # Explicitly set to English for better recognition
+                text = self.recognizer.recognize_google(audio, language='en-US')
+                print(f"Google recognized: '{text}'")
+                return text
+            except sr.UnknownValueError:
+                print("Google couldn't understand audio")
+            except sr.RequestError:
+                print("Network error with Google recognition")
+                Config.OFFLINE_MODE = True
+        
+        # If all methods failed
+        return text or ""
 
 # ====== System Controller ======
 class SystemController:
