@@ -1,0 +1,117 @@
+# import os
+# import pyttsx3
+# import speech_recognition as sr
+# import pyautogui
+# import webbrowser
+
+# # ========== SETUP ==========
+# engine = pyttsx3.init()
+# recognizer = sr.Recognizer()
+
+# def speak(text):
+#     engine.say(text)
+#     engine.runAndWait()
+
+# def listen_command():
+#     with sr.Microphone() as source:
+#         print("🎤 Listening...")
+#         recognizer.adjust_for_ambient_noise(source)
+#         audio = recognizer.listen(source)
+#     try:
+#         command = recognizer.recognize_google(audio).lower()
+#         print(f"🗣️ Command: {command}")
+#         return command
+#     except sr.UnknownValueError:
+#         speak("Sorry, I didn't catch that.")
+#         return ""
+#     except sr.RequestError:
+#         speak("Internet issue.")
+#         return ""
+
+# # ========== ACTIONS ==========
+# def open_app(app_name):
+#     paths = {
+#         "chrome": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+#         "notepad": "notepad",
+#         "whatsapp": "C:\\Users\\%USERNAME%\\AppData\\Local\\WhatsApp\\WhatsApp.exe",
+#         "spotify": "C:\\Users\\%USERNAME%\\AppData\\Roaming\\Spotify\\Spotify.exe",
+#         "brave": "C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe"
+#     }
+#     path = paths.get(app_name)
+#     if path:
+#         speak(f"Opening {app_name}")
+#         os.startfile(os.path.expandvars(path))
+#     else:
+#         speak(f"Application {app_name} not found.")
+
+# def write_text():
+#     speak("What should I write?")
+#     text = listen_command()
+#     pyautogui.write(text, interval=0.05)
+
+# def read_screen():
+#     speak("Reading current screen...")
+#     screenshot = pyautogui.screenshot()
+#     screenshot.save("screen.png")
+#     speak("Reading screen not available in this version.")
+
+# def search_google(query):
+#     speak(f"Searching Google for {query}")
+#     webbrowser.open(f"https://www.google.com/search?q={query}")
+
+# def control_pc(command):
+#     if "shutdown" in command:
+#         speak("Shutting down.")
+#         os.system("shutdown /s /t 5")
+#     elif "restart" in command:
+#         speak("Restarting.")
+#         os.system("shutdown /r /t 5")
+#     elif "lock" in command:
+#         speak("Locking device.")
+#         os.system("rundll32.exe user32.dll,LockWorkStation")
+
+# def open_folder(folder_name):
+#     paths = {
+#         "downloads": os.path.join(os.path.expanduser('~'), 'Downloads'),
+#         "documents": os.path.join(os.path.expanduser('~'), 'Documents'),
+#         "desktop": os.path.join(os.path.expanduser('~'), 'Desktop')
+#     }
+#     folder = paths.get(folder_name)
+#     if folder:
+#         speak(f"Opening {folder_name} folder")
+#         os.startfile(folder)
+#     else:
+#         speak("Folder not found.")
+
+# # ========== MAIN LOOP ==========
+# speak("Voice assistant ready.")
+# while True:
+#     command = listen_command()
+
+#     if any(x in command for x in ["exit", "quit", "stop"]):
+#         speak("Goodbye.")
+#         break
+
+#     elif "open" in command:
+#         for app in ["chrome", "notepad", "whatsapp", "spotify", "brave"]:
+#             if app in command:
+#                 open_app(app)
+#         for folder in ["downloads", "documents", "desktop"]:
+#             if folder in command:
+#                 open_folder(folder)
+
+#     elif "write" in command:
+#         write_text()
+
+#     elif "read" in command:
+#         read_screen()
+
+#     elif "search" in command:
+#         query = command.replace("search", "").strip()
+#         search_google(query)
+
+#     elif any(x in command for x in ["shutdown", "restart", "lock"]):
+#         control_pc(command)
+
+#     else:
+#         speak("Sorry, I don't understand that.")
