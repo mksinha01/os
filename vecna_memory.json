@@ -39,6 +39,96 @@
             "timestamp": "2025-08-04 23:05:38",
             "user_input": " \uc624\ube75\ud06c\ub85c",
             "assistant_response": "I'm not sure how to help with that. Could you rephrase your request?"
+        },
+        {
+            "timestamp": "2025-08-04 23:08:55",
+            "user_input": "open Chrome",
+            "assistant_response": "Opening chrome"
+        },
+        {
+            "timestamp": "2025-08-04 23:09:15",
+            "user_input": "close the tab",
+            "assistant_response": "Closed the current tab"
+        },
+        {
+            "timestamp": "2025-08-04 23:09:28",
+            "user_input": "close the tab",
+            "assistant_response": "Closed the current tab"
+        },
+        {
+            "timestamp": "2025-08-04 23:09:56",
+            "user_input": "take the screenshot",
+            "assistant_response": "I'm not sure how to help with that. Could you rephrase your request?"
+        },
+        {
+            "timestamp": "2025-08-04 23:11:01",
+            "user_input": "set volume at",
+            "assistant_response": "Please specify a volume level between 0 and 100"
+        },
+        {
+            "timestamp": "2025-08-04 23:11:16",
+            "user_input": "50",
+            "assistant_response": "I'm not sure how to help with that. Could you rephrase your request?"
+        },
+        {
+            "timestamp": "2025-08-04 23:11:29",
+            "user_input": "Set brightness to 100",
+            "assistant_response": "Brightness set to 100%"
+        },
+        {
+            "timestamp": "2025-08-04 23:11:47",
+            "user_input": "Set brightness to 20%",
+            "assistant_response": "Brightness set to 20%"
+        },
+        {
+            "timestamp": "2025-08-04 23:12:00",
+            "user_input": "set volume at",
+            "assistant_response": "Please specify a volume level between 0 and 100"
+        },
+        {
+            "timestamp": "2025-08-04 23:12:17",
+            "user_input": "open WhatsApp",
+            "assistant_response": "Could not find whatsapp on your system"
+        },
+        {
+            "timestamp": "2025-08-04 23:13:09",
+            "user_input": "type hello world",
+            "assistant_response": "Typed: hello world"
+        },
+        {
+            "timestamp": "2025-08-04 23:13:30",
+            "user_input": "delete hello world",
+            "assistant_response": "I'm not sure how to help with that. Could you rephrase your request?"
+        },
+        {
+            "timestamp": "2025-08-04 23:13:47",
+            "user_input": "select all",
+            "assistant_response": "Selected all text"
+        },
+        {
+            "timestamp": "2025-08-04 23:14:04",
+            "user_input": "copy that",
+            "assistant_response": "Copied text: import os\r\nimport time\r\nimport json\r\nimport dateti..."
+        },
+        {
+            "timestamp": "2025-08-04 23:14:16",
+            "user_input": "open Chrome",
+            "assistant_response": "Opening chrome"
+        },
+        {
+            "timestamp": "2025-08-04 23:14:32",
+            "user_input": "paste in search bar",
+            "assistant_response": "Pasted text"
+        },
+        {
+            "timestamp": "2025-08-04 23:14:38",
+            "user_input": "click enter",
+            "assistant_response": "I'm not sure how to help with that. Could you rephrase your request?"
+        },
+        {
+            "timestamp": "2025-08-04 23:15:04",
+            "user_input": "Close tab",
+            "assistant_response": "Closed the current tab"
         }
     ],
     "preferences": {},
