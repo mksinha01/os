@@ -646,7 +646,6 @@ class VecnaAssistant:
         self.system = SystemController()
         self.intelligence = Intelligence(self.memory)
         self.command_processor = CommandProcessor(self.speech_engine, self.system, self.memory, self.intelligence)
-        self.wake_detector = WakeWordDetector(self.recognizer, self.speech_engine)
         
         # Check for pending reminders
         self._check_reminders()
@@ -658,6 +657,23 @@ class VecnaAssistant:
             for reminder in pending:
                 self.speech_engine.speak(reminder["text"])
     
+    def _show_pyaudio_install_options(self):
+        """Display multiple options for installing PyAudio"""
+        print("\nAlternative PyAudio installation methods:")
+        print("Option 1: Using pipwin (often works on Windows)")
+        print("  pip install pipwin")
+        print("  pipwin install pyaudio")
+        print("\nOption 2: Using pre-built wheel")
+        print("  1. Go to https://www.lfd.uci.edu/~gohlke/pythonlibs/#pyaudio")
+        print("  2. Download the appropriate wheel file for your Python version")
+        print("     (e.g., PyAudio‑0.2.11‑cp310‑cp310‑win_amd64.whl for Python 3.10 64-bit)")
+        print("  3. Install using: pip install path\\to\\downloaded\\wheel\\file.whl")
+        print("\nOption 3: Using conda (if you have Anaconda/Miniconda)")
+        print("  conda install -c anaconda pyaudio")
+        print("\nOption 4: For development environments with Microsoft Visual C++")
+        print("  pip install --upgrade setuptools")
+        print("  pip install pyaudio")
+    
     def startup(self):
         # Check if required packages are installed
         missing_packages = []
@@ -668,12 +684,23 @@ class VecnaAssistant:
         except ImportError:
             print("\n============== IMPORTANT NOTICE ==============")
             print("PyAudio is required for microphone access but is not installed.")
-            print("On Windows, you may need to install it manually:")
-            print("1. Run: pip install pipwin")
-            print("2. Run: pipwin install pyaudio")
+            print("Attempting to install PyAudio automatically...")
+            
+            # Try direct installation first
+            try:
+                subprocess.check_call([sys.executable, "-m", "pip", "install", "PyAudio"])
+                print("Successfully installed PyAudio!")
+                try:
+                    import pyaudio
+                    print("PyAudio imported successfully!")
+                except ImportError:
+                    self._show_pyaudio_install_options()
+            except Exception as e:
+                print(f"Failed to install PyAudio directly: {e}")
+                self._show_pyaudio_install_options()
+                
             print("==============================================\n")
-            self.speech_engine.speak("PyAudio is missing. Please check the console for installation instructions.")
-            missing_packages.append("pipwin")  # Will install pipwin to help with PyAudio
+            self.speech_engine.speak("PyAudio installation attempted. Check console for results.")
         
         try:
             import screen_brightness_control
@@ -719,14 +746,12 @@ class VecnaAssistant:
     
     def run(self):
         self.startup()
+        self.speech_engine.speak("Vecna is now listening continuously. No wake word needed.")
         
         while True:
-            # Listen for wake word
-            if self.wake_detector.listen_for_wake_word():
-                # Visual/audio indication that wake word was detected
-                self.speech_engine.speak("Yes?")
-                
-                # Listen for command
+            # Listen for command directly - no wake word needed
+            print("🎤 Listening for command...")
+            try:
                 audio = self.recognizer.listen()
                 command = self.recognizer.recognize(audio)
                 
@@ -748,8 +773,10 @@ class VecnaAssistant:
                             exec(action)
                         except Exception as e:
                             print(f"Error executing action: {e}")
-                else:
-                    self.speech_engine.speak("I didn't catch that. Please try again.")
+                # Don't say anything if no command was detected
+            except Exception as e:
+                print(f"Error listening for command: {e}")
+                time.sleep(1)
 
 
 # ====== Run Assistant ======
