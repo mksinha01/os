@@ -286,18 +286,78 @@ class SpeechRecognizer:
 class SystemController:
     @staticmethod
     def open_app(app_name):
-        matched = [key for key in Config.APP_PATHS.keys() if key in app_name.lower()]
+        # Enhanced app detection with more applications
+        enhanced_apps = {
+            "whatsapp": ["C:\\Users\\%USERNAME%\\AppData\\Local\\WhatsApp\\WhatsApp.exe",
+                        "C:\\Program Files\\WhatsApp\\WhatsApp.exe",
+                        "C:\\Program Files (x86)\\WhatsApp\\WhatsApp.exe"],
+            "davinci": ["C:\\Program Files\\Blackmagic Design\\DaVinci Resolve\\Resolve.exe",
+                       "C:\\Program Files (x86)\\Blackmagic Design\\DaVinci Resolve\\Resolve.exe"],
+            "davinci resolve": ["C:\\Program Files\\Blackmagic Design\\DaVinci Resolve\\Resolve.exe"],
+            "telegram": ["C:\\Users\\%USERNAME%\\AppData\\Roaming\\Telegram Desktop\\Telegram.exe"],
+            "discord": ["C:\\Users\\%USERNAME%\\AppData\\Local\\Discord\\app-*\\Discord.exe"],
+            "spotify": ["C:\\Users\\%USERNAME%\\AppData\\Roaming\\Spotify\\Spotify.exe"],
+            "steam": ["C:\\Program Files (x86)\\Steam\\steam.exe"],
+            "zoom": ["C:\\Users\\%USERNAME%\\AppData\\Roaming\\Zoom\\bin\\Zoom.exe"],
+            "teams": ["C:\\Users\\%USERNAME%\\AppData\\Local\\Microsoft\\Teams\\current\\Teams.exe"],
+            "vlc": ["C:\\Program Files\\VideoLAN\\VLC\\vlc.exe"],
+            "obs": ["C:\\Program Files\\obs-studio\\bin\\64bit\\obs64.exe"],
+            "photoshop": ["C:\\Program Files\\Adobe\\Adobe Photoshop *\\Photoshop.exe"],
+            "premiere": ["C:\\Program Files\\Adobe\\Adobe Premiere Pro *\\Adobe Premiere Pro.exe"],
+            "after effects": ["C:\\Program Files\\Adobe\\Adobe After Effects *\\Support Files\\AfterFX.exe"],
+            "blender": ["C:\\Program Files\\Blender Foundation\\Blender *\\blender.exe"],
+            "unity": ["C:\\Program Files\\Unity\\Hub\\Editor\\*\\Editor\\Unity.exe"],
+            "visual studio": ["C:\\Program Files\\Microsoft Visual Studio\\*\\*\\Common7\\IDE\\devenv.exe"],
+            "firefox": ["C:\\Program Files\\Mozilla Firefox\\firefox.exe"],
+            "edge": ["C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe"],
+            "brave": ["C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe"]
+        }
+        
+        # Merge with existing app paths
+        all_apps = {**Config.APP_PATHS, **enhanced_apps}
+        
+        matched = [key for key in all_apps.keys() if key in app_name.lower()]
         if matched:
             app_key = matched[0]
-            app_path = Config.APP_PATHS[app_key]
+            app_paths = all_apps[app_key]
             
-            # Handle multiple paths (like for WhatsApp)
-            if isinstance(app_path, list):
-                for path in app_path:
+            # Handle multiple paths
+            if isinstance(app_paths, list):
+                for path in app_paths:
                     try:
                         expanded_path = os.path.expandvars(path)
-                        if os.path.exists(expanded_path):
+                        # Handle wildcard paths
+                        if '*' in expanded_path:
+                            import glob
+                            matching_paths = glob.glob(expanded_path)
+                            if matching_paths:
+                                os.startfile(matching_paths[0])
+                                return f"Opening {app_key}"
+                        elif os.path.exists(expanded_path):
                             os.startfile(expanded_path)
+                            return f"Opening {app_key}"
+                    except Exception as e:
+                        print(f"Failed to open {path}: {e}")
+                        continue
+                
+                # If no direct path worked, try using Windows search
+                try:
+                    subprocess.run(f'start "" "{app_key}"', shell=True)
+                    return f"Attempting to open {app_key}"
+                except:
+                    return f"Could not find {app_key}"
+            else:
+                # Single path
+                try:
+                    expanded_path = os.path.expandvars(app_paths)
+                    if os.path.exists(expanded_path):
+                        os.startfile(expanded_path)
+                        return f"Opening {app_key}"
+                    else:
+                        subprocess.run(f'start "" "{app_key}"', shell=True)
+                        return f"Attempting to open {app_key}"
+                except Exception as e:
+                    return f"Error opening {app_key}: {e}"
                             return f"Opening {app_key}"
                     except:
                         continue
