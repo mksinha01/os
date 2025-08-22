@@ -378,7 +378,10 @@ class SystemController:
     @staticmethod
     def take_screenshot():
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        screenshot_path = os.path.join(Config.FOLDER_PATHS["pictures"], f"screenshot_{timestamp}.png")
+        # Ensure the pictures directory exists
+        pictures_dir = Config.FOLDER_PATHS["pictures"]
+        os.makedirs(pictures_dir, exist_ok=True)
+        screenshot_path = os.path.join(pictures_dir, f"screenshot_{timestamp}.png")
         pyautogui.screenshot(screenshot_path)
         return f"Screenshot saved to {screenshot_path}"
     
@@ -453,6 +456,21 @@ class SystemController:
     @staticmethod
     def get_current_date():
         return f"Today is {datetime.datetime.now().strftime('%A, %B %d, %Y')}"
+    
+    @staticmethod
+    def shutdown_computer():
+        os.system("shutdown /s /t 5")
+        return "Shutting down computer in 5 seconds"
+    
+    @staticmethod
+    def restart_computer():
+        os.system("shutdown /r /t 5")
+        return "Restarting computer in 5 seconds"
+    
+    @staticmethod
+    def sleep_computer():
+        os.system("rundll32.exe powrprof.dll,SetSuspendState 0,1,0")
+        return "Putting computer to sleep"
 
 # ====== Intelligence Module ======
 class Intelligence:
@@ -524,21 +542,21 @@ class CommandProcessor:
             "select all": self._handle_select_all,
             "search for": self._handle_search,
             "google": self._handle_search,
-            "take screenshot": self.system.take_screenshot,
-            "system info": self.system.get_system_info,
+            "take screenshot": self._handle_screenshot,
+            "system info": self._handle_system_info,
             "set volume": self._handle_volume,
             "set brightness": self._handle_brightness,
-            "play": self.system.play_pause_media,
-            "pause": self.system.play_pause_media,
-            "next track": self.system.next_track,
-            "previous track": self.system.previous_track,
-            "lock computer": self.system.lock_computer,
-            "what time": self.system.get_current_time,
-            "what date": self.system.get_current_date,
-            "what day": self.system.get_current_date,
-            "switch window": self.system.switch_window,
-            "switch tab": self.system.switch_tab,
-            "undo": self.system.undo
+            "play": self._handle_play_pause,
+            "pause": self._handle_play_pause,
+            "next track": self._handle_next_track,
+            "previous track": self._handle_previous_track,
+            "lock computer": self._handle_lock_computer,
+            "what time": self._handle_get_time,
+            "what date": self._handle_get_date,
+            "what day": self._handle_get_date,
+            "switch window": self._handle_switch_window,
+            "switch tab": self._handle_switch_tab,
+            "undo": self._handle_undo
         }
     
     def _handle_open(self, command):
@@ -590,12 +608,41 @@ class CommandProcessor:
             return "What would you like me to search for?"
     
     def _handle_volume(self, command):
-        # Extract volume level
-        try:
-            level = int(''.join(filter(str.isdigit, command)))
-            return self.system.set_volume(level)
-        except:
-            return "Please specify a volume level between 0 and 100"
+        if "up" in command:
+            keyboard.press_and_release('volume up')
+            return "Volume increased"
+        elif "down" in command:
+            keyboard.press_and_release('volume down')
+            return "Volume decreased"
+        elif "mute" in command:
+            keyboard.press_and_release('volume mute')
+            return "Audio muted"
+        elif "unmute" in command:
+            keyboard.press_and_release('volume mute')  # Toggle mute
+            return "Audio unmuted"
+        else:
+            # Try to extract volume level
+            try:
+                import re
+                numbers = re.findall(r'\d+', command)
+                if numbers:
+                    level = int(numbers[0])
+                    if 0 <= level <= 100:
+                        # Use a basic volume setting approach
+                        current_vol = 50  # Assume current volume
+                        if level > current_vol:
+                            for _ in range((level - current_vol) // 2):
+                                keyboard.press_and_release('volume up')
+                        else:
+                            for _ in range((current_vol - level) // 2):
+                                keyboard.press_and_release('volume down')
+                        return f"Volume set to approximately {level}%"
+                    else:
+                        return "Volume level should be between 0 and 100"
+                else:
+                    return "Please specify volume level or say 'volume up/down/mute'"
+            except:
+                return "Please specify a volume level between 0 and 100"
     
     def _handle_brightness(self, command):
         # Extract brightness level
@@ -606,17 +653,69 @@ class CommandProcessor:
             return "Please specify a brightness level between 0 and 100"
     
     def process_command(self, command):
+        command_lower = command.lower().strip()
+        
         # Check for custom commands
         custom_commands = self.memory.memories["custom_commands"]
         for cmd_name, action in custom_commands.items():
-            if cmd_name.lower() in command.lower():
+            if cmd_name.lower() in command_lower:
                 return f"Executing custom command: {cmd_name}", action
         
-        # Check for built-in commands
+        # Enhanced command matching with better logic
+        # First check for exact phrase matches
         for key_phrase, handler in self.commands.items():
-            if key_phrase.lower() in command.lower():
-                response = handler(command.lower())
-                return response, None
+            if key_phrase.lower() in command_lower:
+                try:
+                    response = handler(command_lower)
+                    return response, None
+                except Exception as e:
+                    return f"Error executing command: {e}", None
+        
+        # Additional command variations and aliases
+        command_aliases = {
+            "screenshot": "take screenshot",
+            "screen shot": "take screenshot", 
+            "screen capture": "take screenshot",
+            "volume up": "set volume up",
+            "volume down": "set volume down",
+            "mute": "set volume mute",
+            "unmute": "set volume unmute",
+            "shutdown": "shutdown computer",
+            "restart": "restart computer", 
+            "sleep": "sleep computer",
+            "time": "what time",
+            "date": "what date",
+            "day": "what day",
+            "tell me a joke": "joke",
+            "joke": "tell joke",
+            "weather": "get weather",
+            "system": "system info",
+            "info": "system info"
+        }
+        
+        # Check aliases
+        for alias, actual_command in command_aliases.items():
+            if alias in command_lower:
+                if actual_command in self.commands:
+                    try:
+                        response = self.commands[actual_command](command_lower)
+                        return response, None
+                    except Exception as e:
+                        return f"Error executing {actual_command}: {e}", None
+                else:
+                    # Handle special cases
+                    if "joke" in actual_command:
+                        return self._handle_joke(), None
+                    elif "weather" in actual_command:
+                        return self._handle_weather(), None
+                    elif "volume" in actual_command:
+                        return self._handle_volume(command_lower), None
+                    elif "shutdown" in actual_command:
+                        return self.system.shutdown_computer(), None
+                    elif "restart" in actual_command:
+                        return self.system.restart_computer(), None
+                    elif "sleep" in actual_command:
+                        return self.system.sleep_computer(), None
         
         # If no command matched, use AI
         system_context = """
@@ -629,6 +728,54 @@ class CommandProcessor:
             return ai_response, None
         else:
             return "I'm not sure how to help with that. Could you rephrase your request?", None
+    
+    def _handle_joke(self):
+        jokes = [
+            "Why don't computers ever get cold? Because they have Windows!",
+            "Why was the computer tired? It had a hard drive!",
+            "What do you call a computer that sings? A Dell!",
+            "Why don't programmers like nature? It has too many bugs!",
+            "How does a computer get drunk? It takes screenshots!"
+        ]
+        import random
+        return random.choice(jokes)
+    
+    def _handle_weather(self):
+        return "I would need a weather API key to get current weather information. You can set this up in your configuration."
+    
+    # Wrapper functions for static methods to handle command parameter
+    def _handle_screenshot(self, command):
+        return self.system.take_screenshot()
+    
+    def _handle_system_info(self, command):
+        return self.system.get_system_info()
+    
+    def _handle_play_pause(self, command):
+        return self.system.play_pause_media()
+    
+    def _handle_next_track(self, command):
+        return self.system.next_track()
+    
+    def _handle_previous_track(self, command):
+        return self.system.previous_track()
+    
+    def _handle_lock_computer(self, command):
+        return self.system.lock_computer()
+    
+    def _handle_get_time(self, command):
+        return self.system.get_current_time()
+    
+    def _handle_get_date(self, command):
+        return self.system.get_current_date()
+    
+    def _handle_switch_window(self, command):
+        return self.system.switch_window()
+    
+    def _handle_switch_tab(self, command):
+        return self.system.switch_tab()
+    
+    def _handle_undo(self, command):
+        return self.system.undo()
 
 # ====== Wake Word Detector ======
 class WakeWordDetector:

@@ -129,6 +129,231 @@
             "timestamp": "2025-08-04 23:15:04",
             "user_input": "Close tab",
             "assistant_response": "Closed the current tab"
+        },
+        {
+            "timestamp": "2025-08-22 11:21:10",
+            "user_input": "open Chrome",
+            "assistant_response": "Opening chrome"
+        },
+        {
+            "timestamp": "2025-08-22 11:21:33",
+            "user_input": "select Aman Kumar",
+            "assistant_response": "I'm not sure how to help with that. Could you rephrase your request?"
+        },
+        {
+            "timestamp": "2025-08-22 11:21:43",
+            "user_input": "close the window",
+            "assistant_response": "Closed the current window"
+        },
+        {
+            "timestamp": "2025-08-22 11:22:11",
+            "user_input": "type a text",
+            "assistant_response": "Typed: a text"
+        },
+        {
+            "timestamp": "2025-08-22 11:22:20",
+            "user_input": "open WhatsApp",
+            "assistant_response": "Could not find whatsapp on your system"
+        },
+        {
+            "timestamp": "2025-08-22 11:22:35",
+            "user_input": "tell me about system",
+            "assistant_response": "I'm not sure how to help with that. Could you rephrase your request?"
+        },
+        {
+            "timestamp": "2025-08-22 11:22:49",
+            "user_input": "screenshot",
+            "assistant_response": "I'm not sure how to help with that. Could you rephrase your request?"
+        },
+        {
+            "timestamp": "2025-08-22 11:23:40",
+            "user_input": "take a screenshot",
+            "assistant_response": "I'm not sure how to help with that. Could you rephrase your request?"
+        },
+        {
+            "timestamp": "2025-08-22 11:24:01",
+            "user_input": "850",
+            "assistant_response": "I'm not sure how to help with that. Could you rephrase your request?"
+        },
+        {
+            "timestamp": "2025-08-22 11:24:16",
+            "user_input": "can you back to on OS system",
+            "assistant_response": "I'm not sure how to help with that. Could you rephrase your request?"
+        },
+        {
+            "timestamp": "2025-08-22 11:24:32",
+            "user_input": "tell me a joke",
+            "assistant_response": "I'm not sure how to help with that. Could you rephrase your request?"
+        },
+        {
+            "timestamp": "2025-08-22 11:24:49",
+            "user_input": "5 minutes",
+            "assistant_response": "I'm not sure how to help with that. Could you rephrase your request?"
+        },
+        {
+            "timestamp": "2025-08-22 11:25:36",
+            "user_input": "ok exit",
+            "assistant_response": "I'm not sure how to help with that. Could you rephrase your request?"
+        },
+        {
+            "timestamp": "2025-08-22 11:25:49",
+            "user_input": "stop",
+            "assistant_response": "I'm not sure how to help with that. Could you rephrase your request?"
+        },
+        {
+            "timestamp": "2025-08-22 11:26:02",
+            "user_input": "open Chrome",
+            "assistant_response": "Opening chrome"
+        },
+        {
+            "timestamp": "2025-08-22 11:26:25",
+            "user_input": "the tab",
+            "assistant_response": "I'm not sure how to help with that. Could you rephrase your request?"
+        },
+        {
+            "timestamp": "2025-08-22 11:26:38",
+            "user_input": "close the window",
+            "assistant_response": "Closed the current window"
+        },
+        {
+            "timestamp": "2025-08-22 11:27:08",
+            "user_input": "go to window and search canva",
+            "assistant_response": "I'm not sure how to help with that. Could you rephrase your request?"
+        },
+        {
+            "timestamp": "2025-08-22 11:28:04",
+            "user_input": "take screenshot",
+            "assistant_response": "Error executing command: SystemController.take_screenshot() takes 0 positional arguments but 1 was given"
+        },
+        {
+            "timestamp": "2025-08-22 11:28:21",
+            "user_input": "where is screenshot is safe",
+            "assistant_response": "Error executing take screenshot: SystemController.take_screenshot() takes 0 positional arguments but 1 was given"
+        },
+        {
+            "timestamp": "2025-08-22 11:28:43",
+            "user_input": "volume down at 50%",
+            "assistant_response": "Volume decreased"
+        },
+        {
+            "timestamp": "2025-08-22 11:28:53",
+            "user_input": "volume down at 50%",
+            "assistant_response": "Volume decreased"
+        },
+        {
+            "timestamp": "2025-08-22 11:29:11",
+            "user_input": "volume decrease at",
+            "assistant_response": "I'm not sure how to help with that. Could you rephrase your request?"
+        },
+        {
+            "timestamp": "2025-08-22 11:29:30",
+            "user_input": "volume down at",
+            "assistant_response": "Volume decreased"
+        },
+        {
+            "timestamp": "2025-08-22 11:29:37",
+            "user_input": "volume down 8",
+            "assistant_response": "Volume decreased"
+        },
+        {
+            "timestamp": "2025-08-22 11:29:45",
+            "user_input": "volume down at",
+            "assistant_response": "Volume decreased"
+        },
+        {
+            "timestamp": "2025-08-22 11:29:52",
+            "user_input": "my phone",
+            "assistant_response": "I'm not sure how to help with that. Could you rephrase your request?"
+        },
+        {
+            "timestamp": "2025-08-22 11:30:04",
+            "user_input": "system info",
+            "assistant_response": "Error executing command: SystemController.get_system_info() takes 0 positional arguments but 1 was given"
+        },
+        {
+            "timestamp": "2025-08-22 11:30:20",
+            "user_input": "open Notepad and write",
+            "assistant_response": "Opening notepad"
+        },
+        {
+            "timestamp": "2025-08-22 11:30:28",
+            "user_input": "open a new textile file",
+            "assistant_response": "I don't know how to open a new textile file"
+        },
+        {
+            "timestamp": "2025-08-22 11:30:38",
+            "user_input": "close the window",
+            "assistant_response": "Closed the current window"
+        },
+        {
+            "timestamp": "2025-08-22 11:31:12",
+            "user_input": "close notepad",
+            "assistant_response": "Closed the current window"
+        },
+        {
+            "timestamp": "2025-08-22 11:31:21",
+            "user_input": "what time is it",
+            "assistant_response": "Error executing command: SystemController.get_current_time() takes 0 positional arguments but 1 was given"
+        },
+        {
+            "timestamp": "2025-08-22 11:34:03",
+            "user_input": "what is time is it",
+            "assistant_response": "The time is 11:34 AM"
+        },
+        {
+            "timestamp": "2025-08-22 11:34:17",
+            "user_input": "take screenshot",
+            "assistant_response": "Error executing command: [Errno 2] No such file or directory: 'C:\\\\Users\\\\mksin\\\\Pictures\\\\screenshot_20250822_113416.png'"
+        },
+        {
+            "timestamp": "2025-08-22 11:34:38",
+            "user_input": "ok can you open this",
+            "assistant_response": "I don't know how to open ok can you  this"
+        },
+        {
+            "timestamp": "2025-08-22 11:34:58",
+            "user_input": "volume down at 50",
+            "assistant_response": "Volume decreased"
+        },
+        {
+            "timestamp": "2025-08-22 11:35:06",
+            "user_input": "no I want 8",
+            "assistant_response": "I'm not sure how to help with that. Could you rephrase your request?"
+        },
+        {
+            "timestamp": "2025-08-22 11:35:35",
+            "user_input": "can you decrease",
+            "assistant_response": "I'm not sure how to help with that. Could you rephrase your request?"
+        },
+        {
+            "timestamp": "2025-08-22 11:38:08",
+            "user_input": "take screenshot",
+            "assistant_response": "Screenshot saved to C:\\Users\\mksin\\Pictures\\screenshot_20250822_113807.png"
+        },
+        {
+            "timestamp": "2025-08-22 11:38:56",
+            "user_input": "can you open the screenshot folder",
+            "assistant_response": "I don't know where to find can you  the screenshot folder"
+        },
+        {
+            "timestamp": "2025-08-22 11:39:11",
+            "user_input": "can you open cap cut",
+            "assistant_response": "I don't know how to open can you  cap cut"
+        },
+        {
+            "timestamp": "2025-08-22 11:39:17",
+            "user_input": "cap cut",
+            "assistant_response": "I'm not sure how to help with that. Could you rephrase your request?"
+        },
+        {
+            "timestamp": "2025-08-22 11:39:36",
+            "user_input": "system info",
+            "assistant_response": "CPU usage: 26.3%, RAM usage: 83.3%, Disk usage: 78.7% Battery: 51%"
+        },
+        {
+            "timestamp": "2025-08-22 11:39:55",
+            "user_input": "value of 800 %",
+            "assistant_response": "I'm not sure how to help with that. Could you rephrase your request?"
         }
     ],
     "preferences": {},
