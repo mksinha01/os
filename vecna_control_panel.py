@@ -11,29 +11,146 @@ import psutil
 import datetime
 import os
 import sys
+import speech_recognition as sr
 
 # Add the current directory to path to import vecna modules
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 try:
-    from vecna import VecnaAssistant, Config
-    VECNA_AVAILABLE = True
+    from vecna_bridge import create_vecna_bridge, VECNA_AVAILABLE
 except ImportError:
     VECNA_AVAILABLE = False
-    print("Vecna modules not found - running in demo mode")
+    print("Vecna bridge not found - running in demo mode")
 
 class FuturisticVecnaControlPanel:
     def __init__(self):
         self.root = tk.Tk()
         self.setup_window()
         self.setup_styles()
-        self.create_interface()
-        self.vecna_instance = None
+        
+        # Initialize Vecna components
+        self.vecna_bridge = None
         self.is_listening = False
+        self.listening_thread = None
         self.system_monitor_active = True
+        
+        # Initialize Vecna bridge if available
+        if VECNA_AVAILABLE:
+            try:
+                self.vecna_bridge = create_vecna_bridge(self.add_conversation_message)
+                if self.vecna_bridge.initialize():
+                    print("✓ Vecna bridge successfully initialized")
+                else:
+                    print("✗ Failed to initialize Vecna bridge")
+                    self.vecna_bridge = None
+            except Exception as e:
+                print(f"✗ Error initializing Vecna bridge: {e}")
+                self.vecna_bridge = None
+        else:
+            print("⚠ Running in demo mode - Vecna bridge not available")
+        
+        self.create_interface()
+        
+        # Add initial messages after interface is created
+        if VECNA_AVAILABLE and self.vecna_bridge:
+            self.add_conversation_message("SYSTEM", "Vecna bridge successfully initialized and ready")
+        else:
+            self.add_conversation_message("SYSTEM", "Running in demo mode - Vecna bridge not available")
         
         # Start system monitoring
         self.start_system_monitoring()
+    
+    def _safe_speak(self, text):
+        """Safely speak text if speech engine is available"""
+        try:
+            if self.vecna_bridge:
+                self.vecna_bridge._speak(text)
+        except Exception as e:
+            print(f"Speech error: {e}")
+    
+    def start_vecna(self):
+        """Start Vecna assistant"""
+        try:
+            if VECNA_AVAILABLE and self.vecna_bridge and not self.is_listening:
+                self.add_conversation_message("SYSTEM", "Starting Vecna voice assistant...")
+                
+                # Start listening through bridge
+                if self.vecna_bridge.start_listening():
+                    self.is_listening = True
+                    self.voice_status.config(text="🟢 ONLINE", fg=self.colors['accent_green'])
+                    self.start_btn.config(state='disabled')
+                    self.stop_btn.config(state='normal')
+                    self.status_label.config(text="🤖 Vecna Online • Listening for commands")
+                    
+                    # Get status to show wake words
+                    status = self.vecna_bridge.get_system_status()
+                    wake_words = status.get('wake_words', ['hey vecna'])
+                    self.add_conversation_message("VECNA", f"Hello! I'm Vecna, your AI assistant. Say '{wake_words[0]}' to get my attention.")
+                else:
+                    self.add_conversation_message("SYSTEM", "Failed to start voice recognition")
+                
+            elif not VECNA_AVAILABLE:
+                self.add_conversation_message("SYSTEM", "Vecna modules not available - running in demo mode")
+                self.voice_status.config(text="🟡 DEMO MODE", fg=self.colors['accent_orange'])
+                self.start_btn.config(state='disabled')
+                self.stop_btn.config(state='normal')
+                self.is_listening = True
+                
+            else:
+                self.add_conversation_message("SYSTEM", "Vecna is already running or initialization failed")
+                
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to start Vecna: {e}")
+            self.add_conversation_message("SYSTEM", f"Error starting Vecna: {e}")
+    
+    def stop_vecna(self):
+        """Stop Vecna assistant"""
+        if self.is_listening:
+            self.add_conversation_message("SYSTEM", "Stopping Vecna voice assistant...")
+            
+            if self.vecna_bridge:
+                self.vecna_bridge.stop_listening()
+            
+            self.is_listening = False
+            self.voice_status.config(text="⚫ OFFLINE", fg=self.colors['accent_orange'])
+            self.start_btn.config(state='normal')
+            self.stop_btn.config(state='disabled')
+            self.status_label.config(text="🤖 Vecna Offline • Ready to start")
+            
+            self.add_conversation_message("VECNA", "Goodbye! I'm going offline now.")
+    
+    def execute_voice_command(self, command):
+        """Execute a voice command"""
+        self.add_conversation_message("USER", command)
+        
+        # Use real Vecna backend if available
+        if VECNA_AVAILABLE and self.vecna_bridge:
+            try:
+                result = self.vecna_bridge.execute_command(command)
+                
+                if result['success']:
+                    self.add_conversation_message("VECNA", result['response'])
+                else:
+                    self.add_conversation_message("SYSTEM", f"Command failed: {result['response']}")
+                        
+            except Exception as e:
+                self.add_conversation_message("SYSTEM", f"Error processing command: {e}")
+        else:
+            # Fallback to demo responses
+            responses = {
+                "screenshot": "Screenshot taken and saved to Pictures folder",
+                "what time is it": f"Current time is {datetime.datetime.now().strftime('%H:%M:%S')}",
+                "system info": f"CPU: {psutil.cpu_percent()}%, RAM: {psutil.virtual_memory().percent}%",
+                "volume up": "Volume increased",
+                "volume down": "Volume decreased",
+                "tell me a joke": "Why don't computers catch cold? Because they have Windows!",
+                "open chrome": "Launching Google Chrome",
+                "open notepad": "Opening Notepad",
+                "lock computer": "Computer will be locked"
+            }
+            
+            response = responses.get(command, "Command executed")
+            self.add_conversation_message("VECNA", response)
         
     def setup_window(self):
         """Configure the main window with futuristic styling"""
@@ -740,54 +857,6 @@ class FuturisticVecnaControlPanel:
             print(f"Process update error: {e}")
     
     # Event handlers and methods
-    def start_vecna(self):
-        """Start Vecna assistant"""
-        try:
-            if VECNA_AVAILABLE and not self.is_listening:
-                self.add_conversation_message("SYSTEM", "Starting Vecna voice assistant...")
-                # Here you would start the actual Vecna instance
-                # self.vecna_instance = VecnaAssistant()
-                self.is_listening = True
-                self.voice_status.config(text="🟢 ONLINE", fg=self.colors['accent_green'])
-                self.start_btn.config(state='disabled')
-                self.stop_btn.config(state='normal')
-                self.status_label.config(text="🤖 Vecna Online • Listening for commands")
-            else:
-                self.add_conversation_message("SYSTEM", "Vecna modules not available - running in demo mode")
-                self.voice_status.config(text="🟡 DEMO MODE", fg=self.colors['accent_orange'])
-        except Exception as e:
-            messagebox.showerror("Error", f"Failed to start Vecna: {e}")
-    
-    def stop_vecna(self):
-        """Stop Vecna assistant"""
-        if self.is_listening:
-            self.add_conversation_message("SYSTEM", "Stopping Vecna voice assistant...")
-            self.is_listening = False
-            self.voice_status.config(text="⚫ OFFLINE", fg=self.colors['accent_orange'])
-            self.start_btn.config(state='normal')
-            self.stop_btn.config(state='disabled')
-            self.status_label.config(text="🤖 Vecna Offline • Ready to start")
-    
-    def execute_voice_command(self, command):
-        """Execute a voice command"""
-        self.add_conversation_message("USER", command)
-        
-        # Simulate command execution
-        responses = {
-            "screenshot": "Screenshot taken and saved to Pictures folder",
-            "what time is it": f"Current time is {datetime.datetime.now().strftime('%H:%M:%S')}",
-            "system info": f"CPU: {psutil.cpu_percent()}%, RAM: {psutil.virtual_memory().percent}%",
-            "volume up": "Volume increased",
-            "volume down": "Volume decreased",
-            "tell me a joke": "Why don't computers catch cold? Because they have Windows!",
-            "open chrome": "Launching Google Chrome",
-            "open notepad": "Opening Notepad",
-            "lock computer": "Computer will be locked"
-        }
-        
-        response = responses.get(command, "Command executed")
-        self.add_conversation_message("VECNA", response)
-    
     def add_conversation_message(self, sender, message):
         """Add message to conversation history"""
         timestamp = datetime.datetime.now().strftime("%H:%M:%S")
