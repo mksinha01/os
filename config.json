@@ -1,0 +1,61 @@
+{
+    "speech_recognition": {
+        "engine": "google",
+        "language": "en-US",
+        "whisper_model": "base",
+        "energy_threshold": 4000,
+        "pause_threshold": 0.5,
+        "timeout": 5
+    },
+    "text_to_speech": {
+        "rate": 150,
+        "volume": 0.8,
+        "voice_index": 0
+    },
+    "ai_integration": {
+        "use_ai": true,
+        "primary_ai": "openai",
+        "fallback_ai": "gemini",
+        "model": "gpt-3.5-turbo",
+        "max_tokens": 150,
+        "temperature": 0.7
+    },
+    "gui": {
+        "theme": "dark",
+        "window_size": "800x600",
+        "start_minimized": false,
+        "show_notifications": true,
+        "auto_hide_timeout": 30
+    },
+    "system_control": {
+        "enable_advanced_features": true,
+        "screenshot_directory": "screenshots",
+        "recording_directory": "recordings",
+        "max_recording_duration": 300
+    },
+    "plugins": {
+        "auto_load": true,
+        "plugin_directory": "plugins",
+        "enabled_plugins": [
+            "weather",
+            "calculator",
+            "todo"
+        ]
+    },
+    "memory": {
+        "max_conversations": 1000,
+        "save_location": "vecna_memory.json",
+        "auto_save": true
+    },
+    "hotkeys": {
+        "toggle_listening": "ctrl+alt+v",
+        "show_hide_gui": "ctrl+alt+g",
+        "emergency_stop": "ctrl+alt+s"
+    },
+    "advanced": {
+        "debug_mode": false,
+        "log_level": "INFO",
+        "auto_update_plugins": false,
+        "backup_settings": true
+    }
+}
