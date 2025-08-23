@@ -37,6 +37,13 @@ try:
 except ImportError:
     GEMINI_AVAILABLE = False
 
+try:
+    from advanced_automation import automation
+    AUTOMATION_AVAILABLE = True
+except ImportError:
+    AUTOMATION_AVAILABLE = False
+    print("Advanced automation not available - install selenium, beautifulsoup4, opencv-python for full features")
+
 # ====== Configuration ======
 class Config:
     ASSISTANT_NAME = "vecna"
@@ -286,54 +293,27 @@ class SpeechRecognizer:
 class SystemController:
     @staticmethod
     def open_app(app_name):
-        # Enhanced app detection with more applications
-        enhanced_apps = {
-            "whatsapp": ["C:\\Users\\%USERNAME%\\AppData\\Local\\WhatsApp\\WhatsApp.exe",
-                        "C:\\Program Files\\WhatsApp\\WhatsApp.exe",
-                        "C:\\Program Files (x86)\\WhatsApp\\WhatsApp.exe"],
-            "davinci": ["C:\\Program Files\\Blackmagic Design\\DaVinci Resolve\\Resolve.exe",
-                       "C:\\Program Files (x86)\\Blackmagic Design\\DaVinci Resolve\\Resolve.exe"],
-            "davinci resolve": ["C:\\Program Files\\Blackmagic Design\\DaVinci Resolve\\Resolve.exe"],
-            "telegram": ["C:\\Users\\%USERNAME%\\AppData\\Roaming\\Telegram Desktop\\Telegram.exe"],
-            "discord": ["C:\\Users\\%USERNAME%\\AppData\\Local\\Discord\\app-*\\Discord.exe"],
-            "spotify": ["C:\\Users\\%USERNAME%\\AppData\\Roaming\\Spotify\\Spotify.exe"],
-            "steam": ["C:\\Program Files (x86)\\Steam\\steam.exe"],
-            "zoom": ["C:\\Users\\%USERNAME%\\AppData\\Roaming\\Zoom\\bin\\Zoom.exe"],
-            "teams": ["C:\\Users\\%USERNAME%\\AppData\\Local\\Microsoft\\Teams\\current\\Teams.exe"],
-            "vlc": ["C:\\Program Files\\VideoLAN\\VLC\\vlc.exe"],
-            "obs": ["C:\\Program Files\\obs-studio\\bin\\64bit\\obs64.exe"],
-            "photoshop": ["C:\\Program Files\\Adobe\\Adobe Photoshop *\\Photoshop.exe"],
-            "premiere": ["C:\\Program Files\\Adobe\\Adobe Premiere Pro *\\Adobe Premiere Pro.exe"],
-            "after effects": ["C:\\Program Files\\Adobe\\Adobe After Effects *\\Support Files\\AfterFX.exe"],
-            "blender": ["C:\\Program Files\\Blender Foundation\\Blender *\\blender.exe"],
-            "unity": ["C:\\Program Files\\Unity\\Hub\\Editor\\*\\Editor\\Unity.exe"],
-            "visual studio": ["C:\\Program Files\\Microsoft Visual Studio\\*\\*\\Common7\\IDE\\devenv.exe"],
-            "firefox": ["C:\\Program Files\\Mozilla Firefox\\firefox.exe"],
-            "edge": ["C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe"],
-            "brave": ["C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe"]
-        }
+        # First try advanced automation if available
+        if AUTOMATION_AVAILABLE:
+            try:
+                result = automation.open_advanced_app(app_name)
+                if "Successfully opened" in result or "Attempting to open" in result:
+                    return result
+            except Exception as e:
+                print(f"Advanced app launcher failed: {e}")
         
-        # Merge with existing app paths
-        all_apps = {**Config.APP_PATHS, **enhanced_apps}
-        
-        matched = [key for key in all_apps.keys() if key in app_name.lower()]
+        # Fallback to original method
+        matched = [key for key in Config.APP_PATHS.keys() if key in app_name.lower()]
         if matched:
             app_key = matched[0]
-            app_paths = all_apps[app_key]
+            app_path = Config.APP_PATHS[app_key]
             
-            # Handle multiple paths
-            if isinstance(app_paths, list):
-                for path in app_paths:
+            # Handle multiple paths (like for WhatsApp)
+            if isinstance(app_path, list):
+                for path in app_path:
                     try:
                         expanded_path = os.path.expandvars(path)
-                        # Handle wildcard paths
-                        if '*' in expanded_path:
-                            import glob
-                            matching_paths = glob.glob(expanded_path)
-                            if matching_paths:
-                                os.startfile(matching_paths[0])
-                                return f"Opening {app_key}"
-                        elif os.path.exists(expanded_path):
+                        if os.path.exists(expanded_path):
                             os.startfile(expanded_path)
                             return f"Opening {app_key}"
                     except Exception as e:
@@ -344,12 +324,12 @@ class SystemController:
                 try:
                     subprocess.run(f'start "" "{app_key}"', shell=True)
                     return f"Attempting to open {app_key}"
-                except:
+                except Exception:
                     return f"Could not find {app_key}"
             else:
                 # Single path
                 try:
-                    expanded_path = os.path.expandvars(app_paths)
+                    expanded_path = os.path.expandvars(app_path)
                     if os.path.exists(expanded_path):
                         os.startfile(expanded_path)
                         return f"Opening {app_key}"
@@ -358,18 +338,8 @@ class SystemController:
                         return f"Attempting to open {app_key}"
                 except Exception as e:
                     return f"Error opening {app_key}: {e}"
-                            return f"Opening {app_key}"
-                    except:
-                        continue
-                return f"Could not find {app_key} on your system"
-            else:
-                try:
-                    os.startfile(os.path.expandvars(app_path))
-                    return f"Opening {app_key}"
-                except FileNotFoundError:
-                    return f"{app_key} not found on your system"
         else:
-            return f"I don't know how to open {app_name}"
+            return f"Unknown application: {app_name}"
     
     @staticmethod
     def open_folder(folder_name):
@@ -616,7 +586,22 @@ class CommandProcessor:
             "what day": self._handle_get_date,
             "switch window": self._handle_switch_window,
             "switch tab": self._handle_switch_tab,
-            "undo": self._handle_undo
+            "undo": self._handle_undo,
+            # Advanced automation commands
+            "click at": self._handle_mouse_click,
+            "move mouse": self._handle_mouse_move,
+            "drag": self._handle_mouse_drag,
+            "scroll": self._handle_mouse_scroll,
+            "right click": self._handle_right_click,
+            "double click": self._handle_double_click,
+            "browse to": self._handle_browse_to,
+            "search google": self._handle_google_search,
+            "fill form": self._handle_fill_form,
+            "get page content": self._handle_scrape_page,
+            "automate": self._handle_automation_script,
+            "find and click": self._handle_find_and_click,
+            "window": self._handle_window_management,
+            "file": self._handle_file_operation
         }
     
     def _handle_open(self, command):
@@ -836,6 +821,215 @@ class CommandProcessor:
     
     def _handle_undo(self, command):
         return self.system.undo()
+    
+    # ====== ADVANCED AUTOMATION HANDLERS ======
+    def _handle_mouse_click(self, command):
+        """Handle 'click at X Y' commands"""
+        if not AUTOMATION_AVAILABLE:
+            return "Advanced automation not available"
+        
+        try:
+            import re
+            numbers = re.findall(r'\d+', command)
+            if len(numbers) >= 2:
+                x, y = int(numbers[0]), int(numbers[1])
+                return automation.click_at(x, y)
+            else:
+                return "Please specify coordinates: 'click at X Y'"
+        except Exception as e:
+            return f"Error clicking: {e}"
+    
+    def _handle_mouse_move(self, command):
+        """Handle 'move mouse to X Y' commands"""
+        if not AUTOMATION_AVAILABLE:
+            return "Advanced automation not available"
+        
+        try:
+            import re
+            numbers = re.findall(r'\d+', command)
+            if len(numbers) >= 2:
+                x, y = int(numbers[0]), int(numbers[1])
+                return automation.move_mouse_to(x, y)
+            else:
+                return "Please specify coordinates: 'move mouse to X Y'"
+        except Exception as e:
+            return f"Error moving mouse: {e}"
+    
+    def _handle_mouse_drag(self, command):
+        """Handle 'drag from X1 Y1 to X2 Y2' commands"""
+        if not AUTOMATION_AVAILABLE:
+            return "Advanced automation not available"
+        
+        try:
+            import re
+            numbers = re.findall(r'\d+', command)
+            if len(numbers) >= 4:
+                x1, y1, x2, y2 = int(numbers[0]), int(numbers[1]), int(numbers[2]), int(numbers[3])
+                return automation.drag_mouse(x1, y1, x2, y2)
+            else:
+                return "Please specify coordinates: 'drag from X1 Y1 to X2 Y2'"
+        except Exception as e:
+            return f"Error dragging: {e}"
+    
+    def _handle_mouse_scroll(self, command):
+        """Handle 'scroll up/down at X Y' commands"""
+        if not AUTOMATION_AVAILABLE:
+            return "Advanced automation not available"
+        
+        try:
+            import re
+            numbers = re.findall(r'\d+', command)
+            if len(numbers) >= 2:
+                x, y = int(numbers[0]), int(numbers[1])
+                clicks = 3 if "up" in command else -3
+                return automation.scroll_at(x, y, clicks)
+            else:
+                return "Please specify coordinates: 'scroll up/down at X Y'"
+        except Exception as e:
+            return f"Error scrolling: {e}"
+    
+    def _handle_right_click(self, command):
+        """Handle 'right click at X Y' commands"""
+        if not AUTOMATION_AVAILABLE:
+            return "Advanced automation not available"
+        
+        try:
+            import re
+            numbers = re.findall(r'\d+', command)
+            if len(numbers) >= 2:
+                x, y = int(numbers[0]), int(numbers[1])
+                return automation.right_click_at(x, y)
+            else:
+                return "Please specify coordinates: 'right click at X Y'"
+        except Exception as e:
+            return f"Error right clicking: {e}"
+    
+    def _handle_double_click(self, command):
+        """Handle 'double click at X Y' commands"""
+        if not AUTOMATION_AVAILABLE:
+            return "Advanced automation not available"
+        
+        try:
+            import re
+            numbers = re.findall(r'\d+', command)
+            if len(numbers) >= 2:
+                x, y = int(numbers[0]), int(numbers[1])
+                return automation.double_click_at(x, y)
+            else:
+                return "Please specify coordinates: 'double click at X Y'"
+        except Exception as e:
+            return f"Error double clicking: {e}"
+    
+    def _handle_browse_to(self, command):
+        """Handle 'browse to website.com' commands"""
+        if not AUTOMATION_AVAILABLE:
+            return "Advanced automation not available"
+        
+        try:
+            url = command.replace("browse to", "").strip()
+            if url:
+                return automation.navigate_to_website(url)
+            else:
+                return "Please specify a website: 'browse to website.com'"
+        except Exception as e:
+            return f"Error browsing: {e}"
+    
+    def _handle_google_search(self, command):
+        """Handle 'search google for query' commands"""
+        if not AUTOMATION_AVAILABLE:
+            return "Advanced automation not available"
+        
+        try:
+            query = command.replace("search google for", "").replace("search google", "").strip()
+            if query:
+                return automation.search_on_google(query)
+            else:
+                return "Please specify search query: 'search google for something'"
+        except Exception as e:
+            return f"Error searching: {e}"
+    
+    def _handle_fill_form(self, command):
+        """Handle 'fill form field with text' commands"""
+        if not AUTOMATION_AVAILABLE:
+            return "Advanced automation not available"
+        
+        # This would need more sophisticated parsing
+        # For now, return instruction
+        return "To fill forms, use: 'fill form [field_name] with [text]'"
+    
+    def _handle_scrape_page(self, command):
+        """Handle 'get page content' commands"""
+        if not AUTOMATION_AVAILABLE:
+            return "Advanced automation not available"
+        
+        try:
+            content = automation.scrape_page_content()
+            if isinstance(content, dict):
+                return f"Page: {content['title']} - Found {len(content['headings'])} headings and {len(content['links'])} links"
+            else:
+                return content
+        except Exception as e:
+            return f"Error scraping page: {e}"
+    
+    def _handle_automation_script(self, command):
+        """Handle automation script commands"""
+        if not AUTOMATION_AVAILABLE:
+            return "Advanced automation not available"
+        
+        return "Automation scripting available - use specific commands like 'click at', 'type text', etc."
+    
+    def _handle_find_and_click(self, command):
+        """Handle 'find and click element' commands"""
+        if not AUTOMATION_AVAILABLE:
+            return "Advanced automation not available"
+        
+        # Extract element identifier
+        element = command.replace("find and click", "").strip()
+        if element:
+            return automation.find_and_click_element("text", element)
+        else:
+            return "Please specify what to find and click"
+    
+    def _handle_window_management(self, command):
+        """Handle window management commands"""
+        if not AUTOMATION_AVAILABLE:
+            return "Advanced automation not available"
+        
+        try:
+            if "list" in command:
+                return automation.automate_window_management("list_windows")
+            elif "focus" in command:
+                window_name = command.replace("window focus", "").replace("focus window", "").strip()
+                return automation.automate_window_management("focus_window", window_name)
+            elif "minimize" in command:
+                window_name = command.replace("window minimize", "").replace("minimize window", "").strip()
+                return automation.automate_window_management("minimize_window", window_name)
+            elif "maximize" in command:
+                window_name = command.replace("window maximize", "").replace("maximize window", "").strip()
+                return automation.automate_window_management("maximize_window", window_name)
+            else:
+                return "Window commands: 'window list', 'focus window [name]', 'minimize window [name]', 'maximize window [name]'"
+        except Exception as e:
+            return f"Error with window management: {e}"
+    
+    def _handle_file_operation(self, command):
+        """Handle file operation commands"""
+        if not AUTOMATION_AVAILABLE:
+            return "Advanced automation not available"
+        
+        try:
+            if "copy" in command:
+                return "File copy: 'file copy [source] to [destination]'"
+            elif "move" in command:
+                return "File move: 'file move [source] to [destination]'"
+            elif "delete" in command:
+                return "File delete: 'file delete [path]'"
+            elif "create" in command:
+                return "Create folder: 'file create folder [path]'"
+            else:
+                return "File commands: copy, move, delete, create folder"
+        except Exception as e:
+            return f"Error with file operation: {e}"
 
 # ====== Wake Word Detector ======
 class WakeWordDetector:

@@ -151,6 +151,42 @@ class FuturisticVecnaControlPanel:
             
             response = responses.get(command, "Command executed")
             self.add_conversation_message("VECNA", response)
+    
+    def execute_automation_command(self, command):
+        """Execute automation command with enhanced feedback"""
+        self.add_conversation_message("USER", f"[AUTOMATION] {command}")
+        
+        # Use Vecna bridge for automation commands
+        if VECNA_AVAILABLE and self.vecna_bridge:
+            try:
+                result = self.vecna_bridge.execute_command(command)
+                
+                if result['success']:
+                    self.add_conversation_message("VECNA", f"[AUTOMATION] {result['response']}")
+                else:
+                    self.add_conversation_message("SYSTEM", f"[AUTOMATION ERROR] {result['response']}")
+                        
+            except Exception as e:
+                self.add_conversation_message("SYSTEM", f"[AUTOMATION ERROR] {e}")
+        else:
+            # Demo mode responses for automation
+            demo_responses = {
+                "click at": "Demo: Would click at specified coordinates",
+                "move mouse": "Demo: Would move mouse to coordinates", 
+                "open whatsapp": "Demo: Would open WhatsApp",
+                "browse to": "Demo: Would browse to website",
+                "window list": "Demo: Chrome, Firefox, Notepad, Calculator",
+                "get mouse position": "Demo: Mouse position (960, 540)"
+            }
+            
+            # Find matching demo response
+            demo_response = "Demo: Automation command simulated"
+            for key, response in demo_responses.items():
+                if key in command.lower():
+                    demo_response = response
+                    break
+            
+            self.add_conversation_message("VECNA", f"[DEMO] {demo_response}")
         
     def setup_window(self):
         """Configure the main window with futuristic styling"""
@@ -224,6 +260,7 @@ class FuturisticVecnaControlPanel:
         self.create_voice_control_tab()
         self.create_system_monitor_tab()
         self.create_features_tab()
+        self.create_automation_tab()
         self.create_plugins_tab()
         self.create_settings_tab()
         
@@ -325,7 +362,13 @@ class FuturisticVecnaControlPanel:
             ("🎵 Volume Down", "volume down"),
             ("😄 Tell Joke", "tell me a joke"),
             ("🌐 Open Chrome", "open chrome"),
-            ("📝 Open Notepad", "open notepad")
+            ("📝 Open Notepad", "open notepad"),
+            ("📱 Open WhatsApp", "open whatsapp"),
+            ("🎬 Open DaVinci", "open davinci"),
+            ("🖱️ Get Mouse Position", "get mouse position"),
+            ("🔍 Browse Google", "browse to google.com"),
+            ("🎯 Click Center", "click at 960 540"),
+            ("📋 List Windows", "window list")
         ]
         
         for cmd_text, cmd_voice in commands:
@@ -567,6 +610,212 @@ class FuturisticVecnaControlPanel:
         features_grid.grid_rowconfigure(1, weight=1)
         features_grid.grid_columnconfigure(0, weight=1)
         features_grid.grid_columnconfigure(1, weight=1)
+        
+    def create_automation_tab(self):
+        """Create advanced automation tab"""
+        automation_frame = tk.Frame(self.notebook, bg=self.colors['bg_dark'])
+        self.notebook.add(automation_frame, text="🤖 Automation")
+        
+        # Main scroll frame
+        main_scroll = tk.Frame(automation_frame, bg=self.colors['bg_dark'])
+        main_scroll.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        # Mouse Control Section
+        mouse_frame = tk.Frame(main_scroll, bg=self.colors['bg_panel'], relief='ridge', bd=2)
+        mouse_frame.pack(fill=tk.X, pady=5)
+        
+        tk.Label(mouse_frame, text="🖱️ MOUSE AUTOMATION",
+                font=('Orbitron', 14, 'bold'),
+                fg=self.colors['accent_cyan'],
+                bg=self.colors['bg_panel']).pack(pady=10)
+        
+        # Mouse controls grid
+        mouse_controls = tk.Frame(mouse_frame, bg=self.colors['bg_panel'])
+        mouse_controls.pack(fill=tk.X, padx=20, pady=10)
+        
+        # Coordinate inputs
+        coord_frame = tk.Frame(mouse_controls, bg=self.colors['bg_panel'])
+        coord_frame.pack(fill=tk.X, pady=5)
+        
+        tk.Label(coord_frame, text="Coordinates:",
+                font=('Rajdhani', 11),
+                fg=self.colors['text_primary'],
+                bg=self.colors['bg_panel']).pack(side=tk.LEFT)
+        
+        tk.Label(coord_frame, text="X:",
+                font=('Rajdhani', 10),
+                fg=self.colors['text_secondary'],
+                bg=self.colors['bg_panel']).pack(side=tk.LEFT, padx=(10, 2))
+        
+        self.mouse_x = tk.Entry(coord_frame, width=8, bg=self.colors['bg_dark'], 
+                               fg=self.colors['text_primary'], relief='flat')
+        self.mouse_x.pack(side=tk.LEFT, padx=2)
+        self.mouse_x.insert(0, "960")
+        
+        tk.Label(coord_frame, text="Y:",
+                font=('Rajdhani', 10),
+                fg=self.colors['text_secondary'],
+                bg=self.colors['bg_panel']).pack(side=tk.LEFT, padx=(10, 2))
+        
+        self.mouse_y = tk.Entry(coord_frame, width=8, bg=self.colors['bg_dark'], 
+                               fg=self.colors['text_primary'], relief='flat')
+        self.mouse_y.pack(side=tk.LEFT, padx=2)
+        self.mouse_y.insert(0, "540")
+        
+        # Mouse action buttons
+        mouse_buttons = tk.Frame(mouse_controls, bg=self.colors['bg_panel'])
+        mouse_buttons.pack(fill=tk.X, pady=10)
+        
+        mouse_actions = [
+            ("🎯 Click", lambda: self.execute_automation_command(f"click at {self.mouse_x.get()} {self.mouse_y.get()}")),
+            ("👆 Right Click", lambda: self.execute_automation_command(f"right click at {self.mouse_x.get()} {self.mouse_y.get()}")),
+            ("⏯️ Double Click", lambda: self.execute_automation_command(f"double click at {self.mouse_x.get()} {self.mouse_y.get()}")),
+            ("📍 Move To", lambda: self.execute_automation_command(f"move mouse to {self.mouse_x.get()} {self.mouse_y.get()}")),
+            ("📏 Get Position", lambda: self.execute_automation_command("get mouse position")),
+            ("📜 Scroll Up", lambda: self.execute_automation_command(f"scroll up at {self.mouse_x.get()} {self.mouse_y.get()}"))
+        ]
+        
+        for i, (text, command) in enumerate(mouse_actions):
+            btn = tk.Button(mouse_buttons, text=text,
+                           font=('Rajdhani', 10),
+                           bg=self.colors['bg_dark'],
+                           fg=self.colors['text_primary'],
+                           relief='flat',
+                           padx=10, pady=5,
+                           command=command)
+            btn.grid(row=i//3, column=i%3, padx=5, pady=2, sticky='ew')
+        
+        # Configure grid weights for mouse buttons
+        for i in range(3):
+            mouse_buttons.grid_columnconfigure(i, weight=1)
+        
+        # Web Automation Section
+        web_frame = tk.Frame(main_scroll, bg=self.colors['bg_panel'], relief='ridge', bd=2)
+        web_frame.pack(fill=tk.X, pady=5)
+        
+        tk.Label(web_frame, text="🌐 WEB AUTOMATION",
+                font=('Orbitron', 14, 'bold'),
+                fg=self.colors['accent_purple'],
+                bg=self.colors['bg_panel']).pack(pady=10)
+        
+        # URL input
+        url_frame = tk.Frame(web_frame, bg=self.colors['bg_panel'])
+        url_frame.pack(fill=tk.X, padx=20, pady=5)
+        
+        tk.Label(url_frame, text="Website URL:",
+                font=('Rajdhani', 11),
+                fg=self.colors['text_primary'],
+                bg=self.colors['bg_panel']).pack(side=tk.LEFT)
+        
+        self.url_entry = tk.Entry(url_frame, bg=self.colors['bg_dark'], 
+                                 fg=self.colors['text_primary'], relief='flat')
+        self.url_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=10)
+        self.url_entry.insert(0, "google.com")
+        
+        # Web action buttons
+        web_buttons = tk.Frame(web_frame, bg=self.colors['bg_panel'])
+        web_buttons.pack(fill=tk.X, padx=20, pady=10)
+        
+        web_actions = [
+            ("🚀 Browse To", lambda: self.execute_automation_command(f"browse to {self.url_entry.get()}")),
+            ("🔍 Google Search", lambda: self.execute_automation_command(f"search google for {self.url_entry.get()}")),
+            ("📄 Get Page Content", lambda: self.execute_automation_command("get page content")),
+            ("🔧 Start Browser", lambda: self.execute_automation_command("start browser automation"))
+        ]
+        
+        for i, (text, command) in enumerate(web_actions):
+            btn = tk.Button(web_buttons, text=text,
+                           font=('Rajdhani', 10),
+                           bg=self.colors['bg_dark'],
+                           fg=self.colors['text_primary'],
+                           relief='flat',
+                           padx=10, pady=5,
+                           command=command)
+            btn.grid(row=i//2, column=i%2, padx=5, pady=2, sticky='ew')
+        
+        # Configure grid weights for web buttons
+        web_buttons.grid_columnconfigure(0, weight=1)
+        web_buttons.grid_columnconfigure(1, weight=1)
+        
+        # App Launcher Section
+        app_frame = tk.Frame(main_scroll, bg=self.colors['bg_panel'], relief='ridge', bd=2)
+        app_frame.pack(fill=tk.X, pady=5)
+        
+        tk.Label(app_frame, text="🚀 ADVANCED APP LAUNCHER",
+                font=('Orbitron', 14, 'bold'),
+                fg=self.colors['accent_green'],
+                bg=self.colors['bg_panel']).pack(pady=10)
+        
+        # App launcher grid
+        app_grid = tk.Frame(app_frame, bg=self.colors['bg_panel'])
+        app_grid.pack(fill=tk.X, padx=20, pady=10)
+        
+        advanced_apps = [
+            ("📱 WhatsApp", "open whatsapp"),
+            ("🎬 DaVinci Resolve", "open davinci"),
+            ("💬 Telegram", "open telegram"),
+            ("🎮 Discord", "open discord"),
+            ("🎵 Spotify", "open spotify"),
+            ("🎮 Steam", "open steam"),
+            ("📹 Zoom", "open zoom"),
+            ("💼 Teams", "open teams"),
+            ("🎥 VLC", "open vlc"),
+            ("🎙️ OBS", "open obs"),
+            ("🎨 Photoshop", "open photoshop"),
+            ("🎞️ Premiere", "open premiere"),
+            ("🔨 Blender", "open blender"),
+            ("🦊 Firefox", "open firefox"),
+            ("⚡ Edge", "open edge"),
+            ("🦁 Brave", "open brave")
+        ]
+        
+        for i, (app_name, command) in enumerate(advanced_apps):
+            btn = tk.Button(app_grid, text=app_name,
+                           font=('Rajdhani', 9),
+                           bg=self.colors['bg_dark'],
+                           fg=self.colors['text_primary'],
+                           relief='flat',
+                           padx=8, pady=4,
+                           command=lambda cmd=command: self.execute_automation_command(cmd))
+            btn.grid(row=i//4, column=i%4, padx=3, pady=2, sticky='ew')
+        
+        # Configure grid weights for app launcher
+        for i in range(4):
+            app_grid.grid_columnconfigure(i, weight=1)
+        
+        # Window Management Section
+        window_frame = tk.Frame(main_scroll, bg=self.colors['bg_panel'], relief='ridge', bd=2)
+        window_frame.pack(fill=tk.X, pady=5)
+        
+        tk.Label(window_frame, text="🪟 WINDOW MANAGEMENT",
+                font=('Orbitron', 14, 'bold'),
+                fg=self.colors['accent_orange'],
+                bg=self.colors['bg_panel']).pack(pady=10)
+        
+        # Window controls
+        window_controls = tk.Frame(window_frame, bg=self.colors['bg_panel'])
+        window_controls.pack(fill=tk.X, padx=20, pady=10)
+        
+        window_actions = [
+            ("📋 List Windows", "window list"),
+            ("🔍 Focus Chrome", "focus window chrome"),
+            ("➖ Minimize All", "minimize all windows"),
+            ("➕ Maximize Current", "maximize current window")
+        ]
+        
+        for i, (text, command) in enumerate(window_actions):
+            btn = tk.Button(window_controls, text=text,
+                           font=('Rajdhani', 10),
+                           bg=self.colors['bg_dark'],
+                           fg=self.colors['text_primary'],
+                           relief='flat',
+                           padx=10, pady=5,
+                           command=lambda cmd=command: self.execute_automation_command(cmd))
+            btn.grid(row=i//2, column=i%2, padx=5, pady=2, sticky='ew')
+        
+        # Configure grid weights for window controls
+        window_controls.grid_columnconfigure(0, weight=1)
+        window_controls.grid_columnconfigure(1, weight=1)
         
     def create_plugins_tab(self):
         """Create plugins management tab"""

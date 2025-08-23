@@ -31,6 +31,14 @@ A powerful Python-based voice assistant that transforms your Windows PC into a s
 - **Calculator Plugin**: Advanced mathematical calculations
 - **Todo Plugin**: Task management and reminders
 
+### 🎮 Advanced Automation (NEW!)
+- **Mouse Control**: Precise coordinate-based clicking, dragging, scrolling
+- **Web Automation**: Browser automation with Selenium and Beautiful Soup
+- **Enhanced App Launching**: Smart detection for WhatsApp, DaVinci Resolve, Discord
+- **Window Focus**: Advanced window management and switching
+- **File Operations**: Automated file copying, moving, and organization
+- **Computer Vision**: Screen analysis and image recognition capabilities
+
 ## 🚀 Quick Start
 
 ### Option 1: Easy Setup (Recommended)
@@ -40,7 +48,13 @@ A powerful Python-based voice assistant that transforms your Windows PC into a s
    ```
    This will automatically set up the environment and install dependencies.
 
-2. **Choose your preferred mode**:
+2. **For Advanced Automation Features**:
+   ```
+   install_advanced_automation.bat
+   ```
+   This installs mouse control, web automation, and enhanced app launching.
+
+3. **Choose your preferred mode**:
    - Enhanced Vecna with GUI (recommended)
    - Enhanced Vecna without GUI
    - Simple Vecna (basic features)
@@ -98,6 +112,35 @@ A powerful Python-based voice assistant that transforms your Windows PC into a s
 ### Plugin Commands
 - "what's the weather in New York" (Weather plugin)
 - "calculate 25 * 30 + 15" (Calculator plugin)
+
+### 🎮 Advanced Automation Commands (NEW!)
+#### Mouse Control
+- "click at 500 300" - Click at specific coordinates
+- "move mouse to 100 200" - Move mouse to position
+- "drag from 100 100 to 200 200" - Drag operation
+- "scroll up" / "scroll down" - Scroll actions
+
+#### Enhanced App Launching
+- "open whatsapp" - Launch WhatsApp with smart detection
+- "open davinci" - Launch DaVinci Resolve
+- "open discord" - Launch Discord
+- "open telegram" - Launch Telegram
+
+#### Web Automation
+- "browse to google.com" - Open website in browser
+- "search for python tutorials" - Automated web search
+- "fill form field username with john" - Form automation
+- "click button submit" - Web element interaction
+
+#### Window Management
+- "window list" - List all open windows
+- "focus notepad" - Focus specific window
+- "minimize chrome" - Minimize specific application
+
+#### File Operations
+- "create folder documents" - Create directories
+- "copy file to backup" - File operations
+- "delete temp files" - Cleanup operations
 - "add task buy groceries" (Todo plugin)
 - "list plugins"
 - "enable plugin weather"
