@@ -27,6 +27,8 @@ class VecnaBridge:
         self.is_initialized = False
         self.is_listening = False
         self.listening_thread = None
+    self.no_wake_word = False
+    self.mic_index = None
         
         # Vecna components
         self.vecna_instance = None
@@ -87,7 +89,10 @@ class VecnaBridge:
             self.listening_thread.start()
             
             self._log("Voice recognition started")
-            self._speak(f"Hello! I'm Vecna. Say '{Config.WAKE_WORDS[0]}' to get my attention.")
+            if self.no_wake_word:
+                self._speak("Listening for commands. No wake word required.")
+            else:
+                self._speak(f"Hello! I'm Vecna. Say '{Config.WAKE_WORDS[0]}' to get my attention.")
             return True
             
         except Exception as e:
@@ -197,7 +202,7 @@ class VecnaBridge:
             self._log(f"Error getting reminders: {e}")
             return []
     
-    def configure_voice(self, rate: int = None, volume: float = None) -> bool:
+    def configure_voice(self, rate: Optional[int] = None, volume: Optional[float] = None) -> bool:
         """Configure voice settings"""
         if not self.speech_engine:
             return False
@@ -215,8 +220,8 @@ class VecnaBridge:
         
         while self.is_listening:
             try:
-                # Listen for wake word
-                if self._listen_for_wake_word():
+                # Listen for wake word unless disabled
+                if self.no_wake_word or self._listen_for_wake_word():
                     self._log("Wake word detected! Listening for command...")
                     
                     # Listen for command
@@ -246,7 +251,10 @@ class VecnaBridge:
         try:
             import speech_recognition as sr
             
-            with sr.Microphone() as source:
+            mic_kwargs = {}
+            if self.mic_index is not None:
+                mic_kwargs['device_index'] = self.mic_index
+            with sr.Microphone(**mic_kwargs) as source:
                 self.recognizer.recognizer.adjust_for_ambient_noise(source, duration=1)
                 audio = self.recognizer.recognizer.listen(source, phrase_time_limit=3)
             
@@ -273,7 +281,10 @@ class VecnaBridge:
         try:
             import speech_recognition as sr
             
-            with sr.Microphone() as source:
+            mic_kwargs = {}
+            if self.mic_index is not None:
+                mic_kwargs['device_index'] = self.mic_index
+            with sr.Microphone(**mic_kwargs) as source:
                 self.recognizer.recognizer.adjust_for_ambient_noise(source, duration=1)
                 audio = self.recognizer.recognizer.listen(source, timeout=5, phrase_time_limit=10)
             
@@ -314,6 +325,15 @@ class VecnaBridge:
                 pass
         
         print(formatted_message)
+
+    # ===== Settings APIs for GUI =====
+    def set_no_wake_word(self, enabled: bool):
+        self.no_wake_word = bool(enabled)
+        self._log(f"No-wake-word mode set to {self.no_wake_word}")
+
+    def set_mic_index(self, index: Optional[int]):
+        self.mic_index = index if (isinstance(index, int) and index >= 0) else None
+        self._log(f"Microphone index set to {self.mic_index}")
 
 # Convenience function to create bridge
 def create_vecna_bridge(message_callback: Optional[Callable] = None) -> VecnaBridge:

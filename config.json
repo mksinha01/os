@@ -13,12 +13,13 @@
         "voice_index": 0
     },
     "ai_integration": {
-        "use_ai": true,
-        "primary_ai": "openai",
+    "use_ai": true,
+    "primary_ai": "gemini",
         "fallback_ai": "gemini",
         "model": "gpt-3.5-turbo",
         "max_tokens": 150,
-        "temperature": 0.7
+    "temperature": 0.7,
+    "gemini_api_key": "AIzaSyDtxtHhIiMB5Zf14ty1fcLX-eUHRQ8n-U4"
     },
     "gui": {
         "theme": "dark",
@@ -31,7 +32,8 @@
         "enable_advanced_features": true,
         "screenshot_directory": "screenshots",
         "recording_directory": "recordings",
-        "max_recording_duration": 300
+    "max_recording_duration": 300,
+    "user_like_open": true
     },
     "plugins": {
         "auto_load": true,

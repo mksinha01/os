@@ -73,6 +73,18 @@ class FuturisticVecnaControlPanel:
         try:
             if VECNA_AVAILABLE and self.vecna_bridge and not self.is_listening:
                 self.add_conversation_message("SYSTEM", "Starting Vecna voice assistant...")
+                # Apply mic and wake-word settings before starting
+                try:
+                    # No wake word toggle (if present)
+                    if hasattr(self, 'no_wake_var'):
+                        self.vecna_bridge.set_no_wake_word(bool(self.no_wake_var.get()))
+                    # Mic selection (if populated)
+                    if hasattr(self, 'mic_list') and hasattr(self, 'mic_map') and self.mic_list.get():
+                        label = self.mic_list.get()
+                        idx = self.mic_map.get(label)
+                        self.vecna_bridge.set_mic_index(idx)
+                except Exception as e:
+                    print(f"Voice settings apply failed: {e}")
                 
                 # Start listening through bridge
                 if self.vecna_bridge.start_listening():
@@ -887,130 +899,98 @@ class FuturisticVecnaControlPanel:
         """Create settings tab"""
         settings_frame = tk.Frame(self.notebook, bg=self.colors['bg_dark'])
         self.notebook.add(settings_frame, text="⚙️ Settings")
-        
-        # Settings sections
+
         settings_scroll = tk.Frame(settings_frame, bg=self.colors['bg_dark'])
         settings_scroll.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-        
+
         # Voice Settings
         voice_settings_frame = tk.Frame(settings_scroll, bg=self.colors['bg_panel'], relief='ridge', bd=2)
         voice_settings_frame.pack(fill=tk.X, pady=5)
-        
         tk.Label(voice_settings_frame, text="🎤 VOICE SETTINGS",
-                font=('Orbitron', 12, 'bold'),
-                fg=self.colors['accent_cyan'],
-                bg=self.colors['bg_panel']).pack(pady=10)
-        
-        # Voice settings controls
+                 font=('Orbitron', 12, 'bold'), fg=self.colors['accent_cyan'], bg=self.colors['bg_panel']).pack(pady=10)
+
         voice_controls_frame = tk.Frame(voice_settings_frame, bg=self.colors['bg_panel'])
         voice_controls_frame.pack(fill=tk.X, padx=20, pady=10)
-        
-        # Recognition engine
-        tk.Label(voice_controls_frame, text="Recognition Engine:",
-                font=('Rajdhani', 11),
-                fg=self.colors['text_primary'],
-                bg=self.colors['bg_panel']).grid(row=0, column=0, sticky='w', pady=5)
-        
+        tk.Label(voice_controls_frame, text="Recognition Engine:", font=('Rajdhani', 11),
+                 fg=self.colors['text_primary'], bg=self.colors['bg_panel']).grid(row=0, column=0, sticky='w', pady=5)
         self.recognition_var = tk.StringVar(value="Google Speech API")
         recognition_combo = ttk.Combobox(voice_controls_frame, textvariable=self.recognition_var,
-                                        values=["Google Speech API", "Whisper AI", "Both"],
-                                        state="readonly")
+                                         values=["Google Speech API", "Whisper AI", "Both"], state="readonly")
         recognition_combo.grid(row=0, column=1, sticky='ew', padx=10, pady=5)
-        
-        # Sensitivity
-        tk.Label(voice_controls_frame, text="Microphone Sensitivity:",
-                font=('Rajdhani', 11),
-                fg=self.colors['text_primary'],
-                bg=self.colors['bg_panel']).grid(row=1, column=0, sticky='w', pady=5)
-        
+
+        # Extras: no wake word + mic select
+        extras_frame = tk.Frame(voice_settings_frame, bg=self.colors['bg_panel'])
+        extras_frame.pack(fill=tk.X, padx=20, pady=10)
+        self.no_wake_var = tk.BooleanVar(value=False)
+        chk = tk.Checkbutton(extras_frame, text="No wake word (always listen)", variable=self.no_wake_var,
+                             bg=self.colors['bg_panel'], fg=self.colors['text_primary'],
+                             selectcolor=self.colors['bg_dark'], activebackground=self.colors['bg_panel'])
+        chk.grid(row=0, column=0, sticky='w', pady=5)
+        tk.Label(extras_frame, text="Microphone:", font=('Rajdhani', 11), fg=self.colors['text_primary'], bg=self.colors['bg_panel']).grid(row=1, column=0, sticky='w', pady=5)
+        self.mic_list = ttk.Combobox(extras_frame, state='readonly')
+        self.mic_list.grid(row=1, column=1, sticky='ew', padx=10)
+        self.mic_map = {}
+        try:
+            mic_names = sr.Microphone.list_microphone_names()
+            values = []
+            for i, name in enumerate(mic_names):
+                label = f"{i}: {name}"
+                values.append(label)
+                self.mic_map[label] = i
+            if values:
+                self.mic_list['values'] = values
+                self.mic_list.set(values[0])
+        except Exception as e:
+            print(f"Mic list error: {e}")
+        extras_frame.grid_columnconfigure(1, weight=1)
+
+        tk.Label(voice_controls_frame, text="Microphone Sensitivity:", font=('Rajdhani', 11),
+                 fg=self.colors['text_primary'], bg=self.colors['bg_panel']).grid(row=1, column=0, sticky='w', pady=5)
         self.sensitivity_var = tk.IntVar(value=75)
         sensitivity_scale = tk.Scale(voice_controls_frame, from_=0, to=100, orient=tk.HORIZONTAL,
-                                    variable=self.sensitivity_var,
-                                    bg=self.colors['bg_panel'],
-                                    fg=self.colors['accent_cyan'],
-                                    highlightthickness=0)
+                                     variable=self.sensitivity_var, bg=self.colors['bg_panel'],
+                                     fg=self.colors['accent_cyan'], highlightthickness=0)
         sensitivity_scale.grid(row=1, column=1, sticky='ew', padx=10, pady=5)
-        
         voice_controls_frame.grid_columnconfigure(1, weight=1)
-        
+
         # AI Settings
         ai_settings_frame = tk.Frame(settings_scroll, bg=self.colors['bg_panel'], relief='ridge', bd=2)
         ai_settings_frame.pack(fill=tk.X, pady=5)
-        
         tk.Label(ai_settings_frame, text="🤖 AI SETTINGS",
-                font=('Orbitron', 12, 'bold'),
-                fg=self.colors['accent_purple'],
-                bg=self.colors['bg_panel']).pack(pady=10)
-        
-        # AI controls
+                 font=('Orbitron', 12, 'bold'), fg=self.colors['accent_purple'], bg=self.colors['bg_panel']).pack(pady=10)
         ai_controls_frame = tk.Frame(ai_settings_frame, bg=self.colors['bg_panel'])
         ai_controls_frame.pack(fill=tk.X, padx=20, pady=10)
-        
-        # AI Provider
-        tk.Label(ai_controls_frame, text="AI Provider:",
-                font=('Rajdhani', 11),
-                fg=self.colors['text_primary'],
-                bg=self.colors['bg_panel']).grid(row=0, column=0, sticky='w', pady=5)
-        
-        self.ai_provider_var = tk.StringVar(value="OpenAI GPT")
+        tk.Label(ai_controls_frame, text="AI Provider:", font=('Rajdhani', 11),
+                 fg=self.colors['text_primary'], bg=self.colors['bg_panel']).grid(row=0, column=0, sticky='w', pady=5)
+        self.ai_provider_var = tk.StringVar(value="Google Gemini")
         ai_combo = ttk.Combobox(ai_controls_frame, textvariable=self.ai_provider_var,
-                               values=["OpenAI GPT", "Google Gemini", "Local AI"],
-                               state="readonly")
+                                values=["Google Gemini", "OpenAI GPT", "Local AI"], state="readonly")
         ai_combo.grid(row=0, column=1, sticky='ew', padx=10, pady=5)
-        
         ai_controls_frame.grid_columnconfigure(1, weight=1)
-        
+
         # System Settings
         system_settings_frame = tk.Frame(settings_scroll, bg=self.colors['bg_panel'], relief='ridge', bd=2)
         system_settings_frame.pack(fill=tk.X, pady=5)
-        
         tk.Label(system_settings_frame, text="💻 SYSTEM SETTINGS",
-                font=('Orbitron', 12, 'bold'),
-                fg=self.colors['accent_green'],
-                bg=self.colors['bg_panel']).pack(pady=10)
-        
-        # System controls
+                 font=('Orbitron', 12, 'bold'), fg=self.colors['accent_green'], bg=self.colors['bg_panel']).pack(pady=10)
         system_controls_frame = tk.Frame(system_settings_frame, bg=self.colors['bg_panel'])
         system_controls_frame.pack(fill=tk.X, padx=20, pady=10)
-        
-        # Checkboxes for various settings
         self.startup_var = tk.BooleanVar(value=False)
-        startup_check = tk.Checkbutton(system_controls_frame, text="Start with Windows",
-                                      variable=self.startup_var,
-                                      bg=self.colors['bg_panel'],
-                                      fg=self.colors['text_primary'],
-                                      selectcolor=self.colors['bg_dark'],
-                                      activebackground=self.colors['bg_panel'])
-        startup_check.pack(anchor='w', pady=2)
-        
+        tk.Checkbutton(system_controls_frame, text="Start with Windows", variable=self.startup_var,
+                       bg=self.colors['bg_panel'], fg=self.colors['text_primary'],
+                       selectcolor=self.colors['bg_dark'], activebackground=self.colors['bg_panel']).pack(anchor='w', pady=2)
         self.notifications_var = tk.BooleanVar(value=True)
-        notifications_check = tk.Checkbutton(system_controls_frame, text="Show notifications",
-                                            variable=self.notifications_var,
-                                            bg=self.colors['bg_panel'],
-                                            fg=self.colors['text_primary'],
-                                            selectcolor=self.colors['bg_dark'],
-                                            activebackground=self.colors['bg_panel'])
-        notifications_check.pack(anchor='w', pady=2)
-        
+        tk.Checkbutton(system_controls_frame, text="Show notifications", variable=self.notifications_var,
+                       bg=self.colors['bg_panel'], fg=self.colors['text_primary'],
+                       selectcolor=self.colors['bg_dark'], activebackground=self.colors['bg_panel']).pack(anchor='w', pady=2)
         self.minimize_tray_var = tk.BooleanVar(value=True)
-        tray_check = tk.Checkbutton(system_controls_frame, text="Minimize to system tray",
-                                   variable=self.minimize_tray_var,
-                                   bg=self.colors['bg_panel'],
-                                   fg=self.colors['text_primary'],
-                                   selectcolor=self.colors['bg_dark'],
-                                   activebackground=self.colors['bg_panel'])
-        tray_check.pack(anchor='w', pady=2)
-        
-        # Save settings button
-        save_btn = tk.Button(settings_scroll,
-                            text="💾 SAVE SETTINGS",
-                            font=('Orbitron', 12, 'bold'),
-                            bg=self.colors['accent_cyan'],
-                            fg='black',
-                            relief='flat',
-                            padx=20, pady=10,
-                            command=self.save_settings)
-        save_btn.pack(pady=20)
+        tk.Checkbutton(system_controls_frame, text="Minimize to system tray", variable=self.minimize_tray_var,
+                       bg=self.colors['bg_panel'], fg=self.colors['text_primary'],
+                       selectcolor=self.colors['bg_dark'], activebackground=self.colors['bg_panel']).pack(anchor='w', pady=2)
+
+        tk.Button(settings_scroll, text="💾 SAVE SETTINGS", font=('Orbitron', 12, 'bold'),
+                  bg=self.colors['accent_cyan'], fg='black', relief='flat', padx=20, pady=10,
+                  command=self.save_settings).pack(pady=20)
         
     def create_status_bar(self, parent):
         """Create status bar at bottom"""

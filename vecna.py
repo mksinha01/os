@@ -59,8 +59,8 @@ class Config:
     LLM_TYPE = "openai"  # openai, gemini, ollama
     
     # API Keys
-    OPENAI_API_KEY = ""  # Your OpenAI API key
-    GEMINI_API_KEY = ""  # Your Gemini API key
+    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")  # Your OpenAI API key
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")  # Your Gemini API key
     ELEVENLABS_API_KEY = ""  # Your ElevenLabs API key
     
     # System paths
@@ -97,6 +97,32 @@ class Config:
         "videos": os.path.join(os.path.expanduser("~"), "Videos"),
         "music": os.path.join(os.path.expanduser("~"), "Music")
     }
+
+    # Load selected settings from config.json when available
+    try:
+        if os.path.exists("config.json"):
+            with open("config.json", "r", encoding="utf-8") as f:
+                _cfg = json.load(f)
+            # AI integration
+            ai_cfg = _cfg.get("ai_integration", {})
+            USE_LLM = ai_cfg.get("use_ai", USE_LLM)
+            # Map primary_ai values (openai|gemini)
+            _primary = ai_cfg.get("primary_ai", None)
+            if _primary in ("openai", "gemini", "ollama"):
+                LLM_TYPE = _primary
+            # Keys from config if present
+            GEMINI_API_KEY = ai_cfg.get("gemini_api_key", GEMINI_API_KEY)
+            OPENAI_API_KEY = ai_cfg.get("openai_api_key", OPENAI_API_KEY)
+            # Speech settings
+            tts_cfg = _cfg.get("text_to_speech", {})
+            VOICE_RATE = tts_cfg.get("rate", VOICE_RATE)
+            VOICE_VOLUME = tts_cfg.get("volume", VOICE_VOLUME)
+            # Recognition settings
+            sr_cfg = _cfg.get("speech_recognition", {})
+            LANGUAGE = sr_cfg.get("language", LANGUAGE)
+            WHISPER_MODEL = sr_cfg.get("whisper_model", WHISPER_MODEL)
+    except Exception as _e:
+        print(f"Config load warning: {_e}")
 
 # ====== Memory System ======
 class Memory:
@@ -183,6 +209,9 @@ class SpeechEngine:
         self.engine = pyttsx3.init()
         self.engine.setProperty('rate', Config.VOICE_RATE)
         self.engine.setProperty('volume', Config.VOICE_VOLUME)
+        self._lock = threading.Lock()
+        self._queue = []
+        self._speaking = False
         
         # Get available voices and set a more natural one if available
         voices = self.engine.getProperty('voices')
@@ -193,8 +222,25 @@ class SpeechEngine:
     
     def speak(self, text):
         print(f"Vecna: {text}")
-        self.engine.say(text)
-        self.engine.runAndWait()
+        # Ensure thread-safe TTS: queue text and process sequentially
+        with self._lock:
+            self._queue.append(text)
+            if not self._speaking:
+                self._speaking = True
+                threading.Thread(target=self._drain_queue, daemon=True).start()
+
+    def _drain_queue(self):
+        while True:
+            with self._lock:
+                if not self._queue:
+                    self._speaking = False
+                    return
+                next_text = self._queue.pop(0)
+            try:
+                self.engine.say(next_text)
+                self.engine.runAndWait()
+            except Exception as e:
+                print(f"TTS error: {e}")
     
     def configure_voice(self, rate=None, volume=None, voice_id=None):
         if rate is not None:
@@ -224,7 +270,8 @@ class SpeechRecognizer:
             try:
                 # Prefer 'base' or 'small' model for better English recognition
                 preferred_model = "base" if Config.WHISPER_MODEL == "tiny" else Config.WHISPER_MODEL
-                self.whisper_model = WhisperModel(preferred_model, device="cpu", language="en")
+                # Initialize whisper model (language will be inferred)
+                self.whisper_model = WhisperModel(preferred_model, device="cpu")
                 print(f"Initialized Whisper with {preferred_model} model specifically for English")
             except Exception as e:
                 print(f"Error initializing Whisper: {e}")
@@ -233,7 +280,7 @@ class SpeechRecognizer:
         with sr.Microphone() as source:
             print("🎤 Listening...")
             # Longer adjustment for better calibration
-            self.recognizer.adjust_for_ambient_noise(source, duration=0.5)
+            self.recognizer.adjust_for_ambient_noise(source, duration=1)
             try:
                 print("Speak now...")
                 # Increase timeout for those who speak more slowly
@@ -284,7 +331,7 @@ class SpeechRecognizer:
                 print("Google couldn't understand audio")
             except sr.RequestError:
                 print("Network error with Google recognition")
-                Config.OFFLINE_MODE = True
+                # Note: network error, continue without changing global config
         
         # If all methods failed
         return text or ""
@@ -292,7 +339,19 @@ class SpeechRecognizer:
 # ====== System Controller ======
 class SystemController:
     @staticmethod
+    def windows_start_search_and_open(query: str):
+        try:
+            pyautogui.press('win')
+            time.sleep(0.35)
+            pyautogui.write(query, interval=0.02)
+            time.sleep(0.25)
+            pyautogui.press('enter')
+            return f"Searching Windows and opening {query}"
+        except Exception as e:
+            return f"Search failed: {e}"
+    @staticmethod
     def open_app(app_name):
+    # Natural user-like flow: try Windows search via Win key if explicit app fails
         # First try advanced automation if available
         if AUTOMATION_AVAILABLE:
             try:
@@ -339,7 +398,17 @@ class SystemController:
                 except Exception as e:
                     return f"Error opening {app_key}: {e}"
         else:
-            return f"Unknown application: {app_name}"
+            # Try Windows Start search as a human would
+            try:
+                # Open Start menu and type app name, then press Enter
+                pyautogui.press('win')
+                time.sleep(0.3)
+                pyautogui.write(app_name, interval=0.02)
+                time.sleep(0.2)
+                pyautogui.press('enter')
+                return f"Searching and opening {app_name}"
+            except Exception as e:
+                return f"Unknown application: {app_name} ({e})"
     
     @staticmethod
     def open_folder(folder_name):
@@ -404,6 +473,21 @@ class SystemController:
     def search_web(query):
         webbrowser.open(f"https://www.google.com/search?q={query.replace(' ', '+')}")
         return f"Searching the web for {query}"
+
+    @staticmethod
+    def open_youtube_search(query: str):
+        # Natural flow: open YouTube, focus search bar, type query, press Enter
+        try:
+            webbrowser.open("https://www.youtube.com")
+            time.sleep(2.0)
+            # Focus browser window and hit '/'
+            pyautogui.press('/')  # YouTube shortcut focuses the search box
+            time.sleep(0.2)
+            pyautogui.write(query, interval=0.02)
+            pyautogui.press('enter')
+            return f"Searching YouTube for {query}"
+        except Exception as e:
+            return f"Error searching YouTube: {e}"
     
     @staticmethod
     def take_screenshot():
@@ -543,7 +627,8 @@ class Intelligence:
                     max_tokens=150,
                     temperature=0.7
                 )
-                return response.choices[0].message.content.strip()
+                content = response.choices[0].message.content
+                return content.strip() if isinstance(content, str) else str(content)
             
             elif Config.LLM_TYPE == "gemini" and self.gemini_model:
                 response = self.gemini_model.generate_content(full_context)
@@ -564,6 +649,9 @@ class CommandProcessor:
         self.intelligence = intelligence
         self.commands = {
             "open": self._handle_open,
+            "open youtube": self._handle_open_youtube,
+            "search youtube": self._handle_search_youtube,
+            "search windows for": self._handle_windows_search,
             "close": self._handle_close,
             "type": self._handle_type,
             "write": self._handle_type,
@@ -572,6 +660,7 @@ class CommandProcessor:
             "select all": self._handle_select_all,
             "search for": self._handle_search,
             "google": self._handle_search,
+            "youtube": self._handle_search_youtube,
             "take screenshot": self._handle_screenshot,
             "system info": self._handle_system_info,
             "set volume": self._handle_volume,
@@ -821,6 +910,34 @@ class CommandProcessor:
     
     def _handle_undo(self, command):
         return self.system.undo()
+
+    def _handle_windows_search(self, command):
+        # e.g., "search windows for whatsapp"
+        query = command.split("search windows for", 1)[-1].strip()
+        if not query:
+            return "What should I search for?"
+        return self.system.windows_start_search_and_open(query)
+
+    def _handle_open_youtube(self, command):
+        # Open YouTube home (optionally with a channel/query)
+        query = command.replace("open youtube", "").strip()
+        if not query:
+            webbrowser.open("https://www.youtube.com")
+            return "Opening YouTube"
+        else:
+            return self.system.open_youtube_search(query)
+
+    def _handle_search_youtube(self, command):
+        # Accept variants like "search youtube for ..." or "youtube ..."
+        q = command
+        for tok in ["search youtube for", "search youtube", "youtube"]:
+            if tok in q:
+                q = q.split(tok, 1)[1]
+                break
+        query = q.strip()
+        if not query:
+            return "What should I search on YouTube?"
+        return self.system.open_youtube_search(query)
     
     # ====== ADVANCED AUTOMATION HANDLERS ======
     def _handle_mouse_click(self, command):
@@ -1062,7 +1179,7 @@ class WakeWordDetector:
                 except sr.RequestError:
                     print("Could not request results from Google Speech Recognition service")
                     # Switch to offline mode if network error
-                    Config.OFFLINE_MODE = True
+                    # Note: network error, continuing without changing Config
                     
             except Exception as e:
                 print(f"Error in wake word detection: {e}")
