@@ -27,17 +27,17 @@ class VecnaBridge:
         self.is_initialized = False
         self.is_listening = False
         self.listening_thread = None
-    self.no_wake_word = False
-    self.mic_index = None
+        self.no_wake_word = False
+        self.mic_index = None
         
         # Vecna components
-        self.vecna_instance = None
-        self.memory = None
-        self.speech_engine = None
-        self.recognizer = None
-        self.system_controller = None
-        self.intelligence = None
-        self.command_processor = None
+        self.vecna_instance: Optional[VecnaAssistant] = None
+        self.memory: Optional[Memory] = None
+        self.speech_engine: Optional[SpeechEngine] = None
+        self.recognizer: Optional[SpeechRecognizer] = None
+        self.system_controller: Optional[SystemController] = None
+        self.intelligence: Optional[Intelligence] = None
+        self.command_processor: Optional[CommandProcessor] = None
         
     def initialize(self) -> bool:
         """Initialize Vecna components"""
@@ -130,6 +130,12 @@ class VecnaBridge:
             }
         
         try:
+            if not self.command_processor:
+                return {
+                    'success': False,
+                    'response': "Command processor unavailable",
+                    'error': True
+                }
             response, action = self.command_processor.process_command(command)
             
             result = {
@@ -305,9 +311,10 @@ class VecnaBridge:
     def _speak(self, text: str):
         """Safely speak text"""
         try:
-            if self.speech_engine and hasattr(self.speech_engine, 'speak'):
+            engine = self.speech_engine
+            if engine and hasattr(engine, 'speak'):
                 threading.Thread(
-                    target=lambda: self.speech_engine.speak(text), 
+                    target=lambda: engine.speak(text), 
                     daemon=True
                 ).start()
         except Exception as e:

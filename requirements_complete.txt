@@ -16,12 +16,10 @@ numpy>=1.21.0
 
 # System control and monitoring
 psutil==5.9.6
-win32gui; platform_system=="Windows"
 pywin32; platform_system=="Windows"
 comtypes; platform_system=="Windows"
 
 # GUI dependencies
-tkinter; platform_system=="Windows"
 Pillow==10.1.0
 
 # Notifications

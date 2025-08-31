@@ -12,6 +12,14 @@ import datetime
 import os
 import sys
 import speech_recognition as sr
+try:
+    import pyaudio
+except Exception:
+    pyaudio = None
+try:
+    import numpy as np
+except Exception:
+    np = None
 
 # Add the current directory to path to import vecna modules
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -28,16 +36,21 @@ class FuturisticVecnaControlPanel:
         self.setup_window()
         self.setup_styles()
         
-        # Initialize Vecna components
-        self.vecna_bridge = None
-        self.is_listening = False
-        self.listening_thread = None
-        self.system_monitor_active = True
-        
-        # Initialize Vecna bridge if available
-        if VECNA_AVAILABLE:
-            try:
-                self.vecna_bridge = create_vecna_bridge(self.add_conversation_message)
+    # Initialize Vecna components
+    self.vecna_bridge = None
+    self.is_listening = False
+    self.listening_thread = None
+    self.system_monitor_active = True
+            self.vecna_bridge = None
+            self.is_listening = False
+            self.listening_thread = None
+            self.system_monitor_active = True
+            # Mic meter state
+            self._mic_monitor_thread = None
+            self._mic_monitor_stop = threading.Event()
+            self._mic_stream = None
+            self._pyaudio = None
+            self._mic_device_index = None
                 if self.vecna_bridge.initialize():
                     print("✓ Vecna bridge successfully initialized")
                 else:
@@ -45,12 +58,12 @@ class FuturisticVecnaControlPanel:
                     self.vecna_bridge = None
             except Exception as e:
                 print(f"✗ Error initializing Vecna bridge: {e}")
-                self.vecna_bridge = None
-        else:
-            print("⚠ Running in demo mode - Vecna bridge not available")
-        
-        self.create_interface()
-        
+            # Mic meter state
+            self._mic_monitor_thread = None
+            self._mic_monitor_stop = threading.Event()
+            self._mic_stream = None
+            self._pyaudio = None
+            self._mic_device_index = None
         # Add initial messages after interface is created
         if VECNA_AVAILABLE and self.vecna_bridge:
             self.add_conversation_message("SYSTEM", "Vecna bridge successfully initialized and ready")
@@ -59,6 +72,11 @@ class FuturisticVecnaControlPanel:
         
         # Start system monitoring
         self.start_system_monitoring()
+        # Ensure mic monitor is stopped on close
+        try:
+            self.root.protocol("WM_DELETE_WINDOW", self.on_close)
+        except Exception:
+            pass
     
     def _safe_speak(self, text):
         """Safely speak text if speech engine is available"""
@@ -66,9 +84,14 @@ class FuturisticVecnaControlPanel:
             if self.vecna_bridge:
                 self.vecna_bridge._speak(text)
         except Exception as e:
-            print(f"Speech error: {e}")
+            # Ensure dependencies are available
+            if np is None:
+                return
+            if not self._open_mic_stream():
     
-    def start_vecna(self):
+            stream = self._mic_stream
+            if stream is None:
+                return
         """Start Vecna assistant"""
         try:
             if VECNA_AVAILABLE and self.vecna_bridge and not self.is_listening:
@@ -943,6 +966,11 @@ class FuturisticVecnaControlPanel:
         except Exception as e:
             print(f"Mic list error: {e}")
         extras_frame.grid_columnconfigure(1, weight=1)
+        # Restart mic monitor when selection changes
+        try:
+            self.mic_list.bind('<<ComboboxSelected>>', lambda e: self._restart_mic_monitor())
+        except Exception:
+            pass
 
         tk.Label(voice_controls_frame, text="Microphone Sensitivity:", font=('Rajdhani', 11),
                  fg=self.colors['text_primary'], bg=self.colors['bg_panel']).grid(row=1, column=0, sticky='w', pady=5)
@@ -991,6 +1019,155 @@ class FuturisticVecnaControlPanel:
         tk.Button(settings_scroll, text="💾 SAVE SETTINGS", font=('Orbitron', 12, 'bold'),
                   bg=self.colors['accent_cyan'], fg='black', relief='flat', padx=20, pady=10,
                   command=self.save_settings).pack(pady=20)
+        # Kick off mic level monitoring after settings UI is ready
+        self._restart_mic_monitor()
+
+    # ===== Mic level meter logic =====
+    def _get_selected_mic_index(self):
+        try:
+            if hasattr(self, 'mic_list') and hasattr(self, 'mic_map'):
+                label = self.mic_list.get()
+                return self.mic_map.get(label)
+        except Exception:
+            pass
+        return None
+
+    def _restart_mic_monitor(self):
+        self._stop_mic_monitor()
+        self._start_mic_monitor()
+
+    def _start_mic_monitor(self):
+        if pyaudio is None or np is None:
+            # Dependencies missing; cannot monitor
+            return
+        if self._mic_monitor_thread and self._mic_monitor_thread.is_alive():
+            return
+        self._mic_monitor_stop.clear()
+        self._mic_monitor_thread = threading.Thread(target=self._mic_monitor_loop, daemon=True)
+        self._mic_monitor_thread.start()
+
+    def _stop_mic_monitor(self):
+        try:
+            self._mic_monitor_stop.set()
+            if self._mic_monitor_thread and self._mic_monitor_thread.is_alive():
+                self._mic_monitor_thread.join(timeout=1.5)
+        except Exception:
+            pass
+        finally:
+            self._close_mic_stream()
+
+    def _open_mic_stream(self):
+        self._close_mic_stream()
+        try:
+            if pyaudio is None:
+                return False
+            idx = self._get_selected_mic_index()
+            self._mic_device_index = idx
+            self._pyaudio = pyaudio.PyAudio()
+            # Use common settings compatible with most mics
+            format_ = pyaudio.paInt16
+            channels = 1
+            rate = 16000
+            frames_per_buffer = 1024
+            stream = self._pyaudio.open(
+                format=format_,
+                channels=channels,
+                rate=rate,
+                input=True,
+                input_device_index=idx if isinstance(idx, int) else None,
+                frames_per_buffer=frames_per_buffer
+            )
+            self._mic_stream = stream
+            return True
+        except Exception as e:
+            print(f"Mic stream open error: {e}")
+            self._close_mic_stream()
+            return False
+
+    def _close_mic_stream(self):
+        try:
+            if self._mic_stream:
+                try:
+                    self._mic_stream.stop_stream()
+                except Exception:
+                    pass
+                try:
+                    self._mic_stream.close()
+                except Exception:
+                    pass
+                self._mic_stream = None
+        finally:
+            try:
+                if self._pyaudio:
+                    self._pyaudio.terminate()
+            except Exception:
+                pass
+            self._pyaudio = None
+
+    def _mic_monitor_loop(self):
+        if not self._open_mic_stream():
+            return
+        stream = self._mic_stream
+        frames_per_buffer = 1024
+        max_level = 1e-6
+        while not self._mic_monitor_stop.is_set():
+            try:
+                data = stream.read(frames_per_buffer, exception_on_overflow=False)
+                if not data:
+                    time.sleep(0.05)
+                    continue
+                # Compute RMS level
+                samples = np.frombuffer(data, dtype=np.int16)
+                if samples.size == 0:
+                    level = 0.0
+                else:
+                    rms = np.sqrt(np.mean(np.square(samples.astype(np.float32))))
+                    level = float(rms / 32768.0)  # normalize 0..1
+                # Smooth and clamp
+                max_level = max(max_level * 0.995, level)
+                norm = 0.0 if max_level <= 0 else min(1.0, level / max_level)
+                self._update_mic_meter(norm)
+            except Exception as e:
+                # Try to recover the stream if device changed
+                print(f"Mic monitor error: {e}")
+                if not self._open_mic_stream():
+                    time.sleep(0.5)
+                continue
+        # Cleanup
+        self._update_mic_meter(0.0)
+
+    def _update_mic_meter(self, level: float):
+        try:
+            level = max(0.0, min(1.0, level))
+            if not hasattr(self, 'mic_canvas') or not self.mic_canvas:
+                return
+            width = 200
+            height = 20
+            fill_w = int(width * level)
+            # Color from green to red
+            r = int(255 * level)
+            g = int(255 * (1.0 - level))
+            color = f"#{r:02x}{g:02x}00"
+            def draw():
+                self.mic_canvas.delete('all')
+                self.mic_canvas.create_rectangle(0, 0, width, height, fill=self.colors['bg_dark'], outline='')
+                self.mic_canvas.create_rectangle(0, 0, fill_w, height, fill=color, outline='')
+            try:
+                self.root.after(0, draw)
+            except Exception:
+                pass
+        except Exception:
+            pass
+
+    def on_close(self):
+        try:
+            self._stop_mic_monitor()
+        except Exception:
+            pass
+        try:
+            self.root.destroy()
+        except Exception:
+            pass
         
     def create_status_bar(self, parent):
         """Create status bar at bottom"""
